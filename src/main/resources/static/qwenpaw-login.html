@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>进入 QwenPaw</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: grid;
+            place-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            color: #1f2933;
+        }
+        .panel {
+            width: min(420px, calc(100vw - 32px));
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+        }
+        .title {
+            margin: 0 0 8px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .message {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #52606d;
+            word-break: break-word;
+        }
+        .error {
+            color: #c9190b;
+        }
+    </style>
+</head>
+<body>
+    <main class="panel">
+        <h1 class="title">正在进入 QwenPaw</h1>
+        <p class="message" id="message">正在登录...</p>
+    </main>
+
+    <script>
+        const LOGIN_PAYLOAD = {
+            username: 'admin',
+            password: 'admin123',
+            expires_in: 86400
+        };
+
+        const messageEl = document.getElementById('message');
+
+        function setMessage(message, isError = false) {
+            messageEl.textContent = message;
+            messageEl.classList.toggle('error', isError);
+        }
+
+        function setUserCookie(userId) {
+            document.cookie = `userid=${encodeURIComponent(userId)}; path=/`;
+        }
+
+        async function loginAndRedirect() {
+            const params = new URLSearchParams(window.location.search);
+            const userId = params.get('user_id');
+
+            if (!userId) {
+                setMessage('缺少用户参数。', true);
+                return;
+            }
+
+            setUserCookie(userId);
+
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(LOGIN_PAYLOAD)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text().catch(() => '');
+                throw new Error(errorText || `登录失败，HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.token) {
+                throw new Error('登录响应缺少 token。');
+            }
+
+            localStorage.setItem('qwenpaw_auth_token', data.token);
+            window.location.replace('/chat');
+        }
+
+        loginAndRedirect().catch(error => {
+            setMessage(error.message || '登录失败。', true);
+        });
+    </script>
+</body>
+</html>

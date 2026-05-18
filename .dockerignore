@@ -1,0 +1,15 @@
+.git
+.idea
+.gradle
+build
+caches
+daemon
+native
+notifications
+.tmp
+gradle
+gradlew
+gradlew.bat
+*.tar
+*.tar.gz
+.DS_Store

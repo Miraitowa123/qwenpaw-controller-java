@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QwenPaw Pod 管理</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 20px 0;
+            margin-bottom: 24px;
+        }
+        header h1 {
+            font-size: 24px;
+            color: #1a1a1a;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .toolbar input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        .toolbar input[type="text"]:focus {
+            outline: none;
+            border-color: #40a9ff;
+        }
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: #fff;
+        }
+        .btn-primary:hover { background: #40a9ff; }
+        .btn-success {
+            background: #52c41a;
+            color: #fff;
+        }
+        .btn-success:hover { background: #73d13d; }
+        .btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+        }
+        .btn-danger:hover { background: #ff7875; }
+        .btn-default {
+            background: #fff;
+            color: #333;
+            border: 1px solid #d9d9d9;
+        }
+        .btn-default:hover {
+            border-color: #40a9ff;
+            color: #40a9ff;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1a1a1a;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #666;
+        }
+        tr:hover { background: #fafafa; }
+        .status {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .status-running { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+        .status-pending { background: #fffbe6; color: #d48806; border: 1px solid #ffe58f; }
+        .status-failed { background: #fff2f0; color: #cf1322; border: 1px solid #ffccc7; }
+        .status-unknown { background: #f5f5f5; color: #666; border: 1px solid #d9d9d9; }
+        .status-creating { background: #e6f7ff; color: #096dd9; border: 1px solid #91d5ff; }
+        .status-restarting { background: #f9f0ff; color: #531dab; border: 1px solid #d3adf7; }
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .actions .btn {
+            padding: 4px 10px;
+            font-size: 13px;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+        .modal-close:hover { color: #333; }
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .log-content {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 16px;
+            border-radius: 6px;
+            font-family: "Consolas", "Monaco", monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 12px 16px;
+            font-size: 14px;
+        }
+        .info-grid .label {
+            color: #666;
+            font-weight: 500;
+        }
+        .info-grid .value {
+            color: #333;
+            word-break: break-all;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            z-index: 2000;
+            transform: translateX(120%);
+            transition: transform 0.3s ease;
+        }
+        .toast.show { transform: translateX(0); }
+        .toast-success { background: #52c41a; }
+        .toast-error { background: #ff4d4f; }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.7);
+            z-index: 1500;
+            justify-content: center;
+            align-items: center;
+        }
+        .loading-overlay.active { display: flex; }
+        .loading-overlay .spinner-large {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f0f0f0;
+            border-radius: 50%;
+            border-top-color: #1890ff;
+            animation: spin 0.8s linear infinite;
+        }
+        .config-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px 20px;
+        }
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .config-item label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 500;
+        }
+        .config-item input {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .config-item input:focus {
+            outline: none;
+            border-color: #40a9ff;
+        }
+        .config-item input:disabled {
+            background: #f5f5f5;
+            color: #999;
+        }
+        .config-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>QwenPaw Pod 管理</h1>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="toolbar">
+            <input type="text" id="newUserId" placeholder="输入 User ID 创建 Pod">
+            <button class="btn btn-success" onclick="createPod()">
+                <span>+</span> 创建 Pod
+            </button>
+            <button class="btn btn-default" onclick="loadPods()">
+                <span>&#x21bb;</span> 刷新
+            </button>
+            <button class="btn btn-default" onclick="syncPods()">
+                <span>&#x21c4;</span> 同步
+            </button>
+            <button class="btn btn-primary" onclick="showConfigModal()">
+                <span>&#9881;</span> 配置管理
+            </button>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Pod 列表</div>
+            <div id="podTableContainer">
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="20" height="20" rx="5"/>
+                        <path d="M2 12h20M12 2v20"/>
+                    </svg>
+                    <p>暂无 Pod 数据</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 日志弹窗 -->
+    <div class="modal-overlay" id="logModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="logModalTitle">Pod 日志</h3>
+                <button class="modal-close" onclick="closeModal('logModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="log-content" id="logContent">加载中...</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="refreshLog()">刷新日志</button>
+                <button class="btn btn-primary" onclick="closeModal('logModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="detailModalTitle">Pod 详情</h3>
+                <button class="modal-close" onclick="closeModal('detailModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="info-grid" id="detailContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('detailModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置管理弹窗 -->
+    <div class="modal-overlay" id="configModal">
+        <div class="modal" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>Controller 配置管理</h3>
+                <button class="modal-close" onclick="closeModal('configModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="configContent">
+                    <p>加载中...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #666; margin-right: auto;">
+                    <input type="checkbox" id="restartAfterUpdate" checked>
+                    更新后重启 Pod 生效
+                </label>
+                <button class="btn btn-default" onclick="loadConfig()">刷新</button>
+                <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-large"></div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // 支持从 /bocompawAdmin 或 / 路径访问
+        const basePath = window.location.pathname.startsWith('/bocompawAdmin') ? '/bocompawAdmin' : '';
+        const API_BASE = basePath + '/api/v1';
+        let currentLogUserId = null;
+        let currentDetail = null;
+
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('active', show);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast toast-${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function apiRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Content-Type': 'application/json' },
+                    ...options
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.detail || err.error || `HTTP ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                showToast(error.message, 'error');
+                throw error;
+            }
+        }
+
+        function getStatusClass(status) {
+            const map = {
+                'running': 'status-running',
+                'pending': 'status-pending',
+                'failed': 'status-failed',
+                'unknown': 'status-unknown',
+                'creating': 'status-creating',
+                'restarting': 'status-restarting'
+            };
+            return map[status?.toLowerCase()] || 'status-unknown';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const d = new Date(dateStr);
+            return d.toLocaleString('zh-CN');
+        }
+
+        async function loadPods() {
+            showLoading(true);
+            try {
+                const data = await apiRequest(`${API_BASE}/users/pods`);
+                renderPodTable(data.users || []);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function renderPodTable(pods) {
+            const container = document.getElementById('podTableContainer');
+            if (!pods || pods.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="2" width="20" height="20" rx="5"/>
+                            <path d="M2 12h20M12 2v20"/>
+                        </svg>
+                        <p>暂无 Pod 数据</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const rows = pods.map(pod => {
+                const userId = escapeHtml(pod.user_id);
+                const podName = escapeHtml(pod.pod_name);
+                const deploymentName = escapeHtml(pod.deployment_name);
+                const serviceName = escapeHtml(pod.service_name);
+                return `
+                    <tr>
+                        <td>${userId}</td>
+                        <td>${podName}</td>
+                        <td><span class="status ${getStatusClass(pod.status)}">${escapeHtml(pod.status)}</span></td>
+                        <td>${deploymentName}</td>
+                        <td>${serviceName}</td>
+                        <td>${formatDate(pod.created_at)}</td>
+                        <td>
+                            <div class="actions">
+                                <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
+                                <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
+                                <button class="btn btn-default" onclick="showLogs('${userId}')">日志</button>
+                                <button class="btn btn-danger" onclick="deletePod('${userId}')">删除</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            container.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Pod 名称</th>
+                            <th>状态</th>
+                            <th>Deployment</th>
+                            <th>Service</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        async function createPod() {
+            const userId = document.getElementById('newUserId').value.trim();
+            if (!userId) {
+                showToast('请输入 User ID', 'error');
+                return;
+            }
+            showLoading(true);
+            try {
+                await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/pod`, {
+                    method: 'POST'
+                });
+                showToast('Pod 创建成功');
+                document.getElementById('newUserId').value = '';
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function deletePod(userId) {
+            if (!confirm(`确定要删除用户 ${userId} 的 Pod 吗？`)) return;
+            showLoading(true);
+            try {
+                await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/pod`, {
+                    method: 'DELETE'
+                });
+                showToast('Pod 删除成功');
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function openUserChat(userId) {
+            const loginUrl = `${basePath}/qwenpaw-login.html?user_id=${encodeURIComponent(userId)}`;
+            window.open(loginUrl, '_blank');
+        }
+
+        async function showLogs(userId) {
+            currentLogUserId = userId;
+            document.getElementById('logModalTitle').textContent = `Pod 日志 - ${userId}`;
+            document.getElementById('logContent').textContent = '加载中...';
+            openModal('logModal');
+            await refreshLog();
+        }
+
+        async function refreshLog() {
+            if (!currentLogUserId) return;
+            try {
+                const data = await apiRequest(`${API_BASE}/users/${encodeURIComponent(currentLogUserId)}/logs?tail=200`);
+                document.getElementById('logContent').textContent = data.logs || '暂无日志';
+            } catch {
+                document.getElementById('logContent').textContent = '加载日志失败';
+            }
+        }
+
+        async function showDetail(userId) {
+            showLoading(true);
+            try {
+                const data = await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/pod`);
+                currentDetail = data;
+                document.getElementById('detailModalTitle').textContent = `Pod 详情 - ${data.user_id}`;
+                document.getElementById('detailContent').innerHTML = `
+                    <div class="label">User ID</div><div class="value">${data.user_id}</div>
+                    <div class="label">Pod 名称</div><div class="value">${data.pod_name}</div>
+                    <div class="label">状态</div><div class="value"><span class="status ${getStatusClass(data.status)}">${data.status}</span></div>
+                    <div class="label">Deployment</div><div class="value">${data.deployment_name}</div>
+                    <div class="label">Service</div><div class="value">${data.service_name}</div>
+                    <div class="label">HTTPRoute</div><div class="value">${data.httproute_name}</div>
+                    <div class="label">访问路径</div><div class="value">${window.location.host}/chat</div><div class="label">提示</div><div class="value">按 Cookie 中的 <code>userid</code> 分流到用户 Pod</div>
+                    <div class="label">创建时间</div><div class="value">${formatDate(data.created_at)}</div>
+                    <div class="label">更新时间</div><div class="value">${formatDate(data.updated_at)}</div>
+                `;
+                openModal('detailModal');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function syncPods() {
+            showLoading(true);
+            try {
+                await apiRequest(`${API_BASE}/admin/sync`, { method: 'POST' });
+                showToast('同步成功');
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            if (id === 'logModal') currentLogUserId = null;
+        }
+
+        // 点击遮罩关闭弹窗
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) overlay.classList.remove('active');
+            });
+        });
+
+        // 回车创建
+        document.getElementById('newUserId').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') createPod();
+        });
+
+        // 页面加载时获取数据
+        loadPods();
+
+        let currentConfigData = {};
+
+        async function loadConfig() {
+            const content = document.getElementById('configContent');
+            content.innerHTML = '<p>加载中...</p>';
+            try {
+                const data = await apiRequest(`${API_BASE}/admin/config`);
+                currentConfigData = data.data || {};
+                renderConfigEditor(currentConfigData);
+            } catch (error) {
+                content.innerHTML = `<p style="color: #cf1322;">加载配置失败: ${error.message}</p>`;
+            }
+        }
+
+        function renderConfigEditor(data) {
+            const content = document.getElementById('configContent');
+            if (!data || Object.keys(data).length === 0) {
+                content.innerHTML = '<p>暂无配置数据</p>';
+                return;
+            }
+            const items = Object.entries(data).map(([key, value]) => `
+                <div class="config-item">
+                    <label>${escapeHtml(key)}</label>
+                    <input type="text" data-key="${escapeHtml(key)}" value="${escapeHtml(value)}" />
+                </div>
+            `).join('');
+            content.innerHTML = `<div class="config-grid">${items}</div>`;
+        }
+
+        function escapeHtml(text) {
+            if (text == null) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function saveConfig() {
+            const inputs = document.querySelectorAll('#configContent input[data-key]');
+            const newData = {};
+            inputs.forEach(input => {
+                newData[input.dataset.key] = input.value;
+            });
+
+            const restart = document.getElementById('restartAfterUpdate').checked;
+
+            showLoading(true);
+            try {
+                const result = await apiRequest(`${API_BASE}/admin/config`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ data: newData, restart_pods: restart })
+                });
+                showToast(result.message || '配置保存成功');
+                currentConfigData = newData;
+                if (result.restarted) {
+                    showToast('已触发 Pod 滚动重启以应用新配置', 'success');
+                }
+                closeModal('configModal');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showConfigModal() {
+            openModal('configModal');
+            loadConfig();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+# =========================
+# 1. Namespace
+# =========================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai
+
+---
+# =========================
+# 2. ServiceAccount
+# =========================
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: qwenpaw-controller
+  namespace: ai
+
+---
+# =========================
+# 3. RBAC Role
+# =========================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: qwenpaw-controller
+  namespace: ai
+rules:
+  # Pod management
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Pod logs access
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  # Service management
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # ConfigMap access
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  # Deployment management
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Gateway API - HTTPRoute management
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+
+---
+# =========================
+# 4. RBAC RoleBinding
+# =========================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: qwenpaw-controller
+  namespace: ai
+subjects:
+  - kind: ServiceAccount
+    name: qwenpaw-controller
+    namespace: ai
+roleRef:
+  kind: Role
+  name: qwenpaw-controller
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# =========================
+# 5. ConfigMap
+# =========================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qwenpaw-controller-config
+  namespace: ai
+data:
+  SERVER_HOST: "0.0.0.0"
+  SERVER_PORT: "8080"
+  SERVER_LOG_LEVEL: "info"
+  K8S_NAMESPACE: "ai"
+  QWENPAW_APP_LABEL: "qwenpaw"
+  QWENPAW_IMAGE: "docker.io/agentscope/qwenpaw:latest"
+  QWENPAW_CONTAINER_PORT: "8088"
+  QWENPAW_CONFIGMAP_NAME: "qwenpaw-global-config"
+  QWENPAW_NAS_PVC_NAME: "qwenpaw-nas-pvc"
+  RESOURCE_REQUESTS_CPU: "500m"
+  RESOURCE_REQUESTS_MEMORY: "1Gi"
+  RESOURCE_LIMITS_CPU: "1"
+  RESOURCE_LIMITS_MEMORY: "2Gi"
+  GATEWAY_NAME: "traefik-gateway"
+  GATEWAY_NAMESPACE: "ai"
+  BASE_PATH_PREFIX: "/users"
+  CONTROLLER_CONFIGMAP_NAME: "qwenpaw-controller-config"
+  CONTROLLER_DEPLOYMENT_NAME: "qwenpaw-controller"
+  POD_READY_TIMEOUT: "600"
+  STARTUP_SYNC_ENABLED: "true"
+
+---
+# =========================
+# 6. Deployment
+# =========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qwenpaw-controller
+  namespace: ai
+  labels:
+    app: qwenpaw-controller
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: qwenpaw-controller
+  template:
+    metadata:
+      labels:
+        app: qwenpaw-controller
+    spec:
+      serviceAccountName: qwenpaw-controller
+      containers:
+        - name: controller
+          image: docker.io/library/qwenpaw-controller-java:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          envFrom:
+            - configMapRef:
+                name: qwenpaw-controller-config
+          livenessProbe:
+            httpGet:
+              path: /bocompawAdmin/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /bocompawAdmin/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+---
+# =========================
+# 7. Service
+# =========================
+apiVersion: v1
+kind: Service
+metadata:
+  name: qwenpaw-controller
+  namespace: ai
+  labels:
+    app: qwenpaw-controller
+spec:
+  selector:
+    app: qwenpaw-controller
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  type: ClusterIP
+
+---
+# =========================
+# 8. Gateway API - HTTPRoute
+# =========================
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: qwenpaw-controller-api
+  namespace: ai
+spec:
+  parentRefs:
+    - name: traefik-gateway
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /bocompawAdmin
+      backendRefs:
+        - name: qwenpaw-controller
+          port: 8080

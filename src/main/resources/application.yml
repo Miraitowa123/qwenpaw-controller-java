@@ -1,0 +1,49 @@
+server:
+  address: ${SERVER_HOST:0.0.0.0}
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /bocompawAdmin
+
+spring:
+  application:
+    name: qwenpaw-controller
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+
+management:
+  endpoints:
+    web:
+      base-path: /actuator
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    root: ${SERVER_LOG_LEVEL:info}
+
+qwenpaw:
+  k8s-namespace: ${K8S_NAMESPACE:ai}
+  qwenpaw-app-label: ${QWENPAW_APP_LABEL:qwenpaw}
+  qwenpaw-image: ${QWENPAW_IMAGE:docker.io/agentscope/qwenpaw:latest}
+  qwenpaw-container-port: ${QWENPAW_CONTAINER_PORT:8088}
+  qwenpaw-configmap-name: ${QWENPAW_CONFIGMAP_NAME:qwenpaw-global-config}
+  qwenpaw-nas-pvc-name: ${QWENPAW_NAS_PVC_NAME:qwenpaw-nas-pvc}
+  resource-requests-cpu: ${RESOURCE_REQUESTS_CPU:500m}
+  resource-requests-memory: ${RESOURCE_REQUESTS_MEMORY:1Gi}
+  resource-limits-cpu: ${RESOURCE_LIMITS_CPU:1}
+  resource-limits-memory: ${RESOURCE_LIMITS_MEMORY:2Gi}
+  liveness-probe-initial-delay: ${LIVENESS_PROBE_INITIAL_DELAY:30}
+  liveness-probe-period: ${LIVENESS_PROBE_PERIOD:10}
+  liveness-probe-timeout: ${LIVENESS_PROBE_TIMEOUT:5}
+  liveness-probe-failure-threshold: ${LIVENESS_PROBE_FAILURE_THRESHOLD:3}
+  readiness-probe-initial-delay: ${READINESS_PROBE_INITIAL_DELAY:10}
+  readiness-probe-period: ${READINESS_PROBE_PERIOD:5}
+  readiness-probe-timeout: ${READINESS_PROBE_TIMEOUT:3}
+  readiness-probe-failure-threshold: ${READINESS_PROBE_FAILURE_THRESHOLD:2}
+  gateway-name: ${GATEWAY_NAME:traefik-gateway}
+  gateway-namespace: ${GATEWAY_NAMESPACE:ai}
+  base-path-prefix: ${BASE_PATH_PREFIX:/users}
+  controller-configmap-name: ${CONTROLLER_CONFIGMAP_NAME:qwenpaw-controller-config}
+  controller-deployment-name: ${CONTROLLER_DEPLOYMENT_NAME:qwenpaw-controller}
+  pod-ready-timeout: ${POD_READY_TIMEOUT:600}
+  startup-sync-enabled: ${STARTUP_SYNC_ENABLED:false}

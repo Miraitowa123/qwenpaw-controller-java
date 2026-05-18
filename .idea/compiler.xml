@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Gradle Imported" enabled="true">
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry name="$PROJECT_DIR$/../../05DevTools/gradle-8.10/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-configuration-processor/3.2.12/c129b36cdb95ee2a048742889aca2d12017d96be/spring-boot-configuration-processor-3.2.12.jar" />
+        </processorPath>
+        <module name="qwenpaw-controller-java.main" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel target="17" />
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_STRING" value="-parameters" />
+  </component>
+</project>
