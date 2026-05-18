@@ -4,31 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/handlers/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/handlers/health.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/handlers/user.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/k8s/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/k8s/client.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/k8s/manager.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/index.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/qwenpaw-controller-java-0.1.1-amd64.tar.gz" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" />
-    </list>
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="commit" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -132,11 +108,24 @@
       <workItem from="1778940967462" duration="1099000" />
       <workItem from="1779017624413" duration="154000" />
       <workItem from="1779017781656" duration="199000" />
-      <workItem from="1779017984116" duration="31167000" />
+      <workItem from="1779017984116" duration="31576000" />
     </task>
+    <task id="LOCAL-00001" summary="commit">
+      <option name="closed" value="true" />
+      <created>1779115592498</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1779115592498</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="commit" />
+    <option name="LAST_COMMIT_MESSAGE" value="commit" />
   </component>
 </project>
