@@ -11,6 +11,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/__init__.py" beforeDir="false" />
@@ -25,6 +26,7 @@
       <change beforePath="$PROJECT_DIR$/app/models.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app/static/index.html" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qwenpaw-controller-java-0.1.1-amd64.tar.gz" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -130,7 +132,7 @@
       <workItem from="1778940967462" duration="1099000" />
       <workItem from="1779017624413" duration="154000" />
       <workItem from="1779017781656" duration="199000" />
-      <workItem from="1779017984116" duration="29713000" />
+      <workItem from="1779017984116" duration="31167000" />
     </task>
     <servers />
   </component>
