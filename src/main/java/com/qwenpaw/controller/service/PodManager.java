@@ -103,6 +103,19 @@ public class PodManager {
         return true;
     }
 
+    public Optional<UserPodMapping> restartUserPod(String userId) {
+        Optional<UserPodMapping> mapping = findUserPod(userId);
+        if (mapping.isEmpty()) {
+            log.warn("User {} has no pod", userId);
+            return Optional.empty();
+        }
+        UserPodMapping pod = mapping.get();
+        if (!restartUserPod(pod)) {
+            return Optional.empty();
+        }
+        return Optional.of(pod);
+    }
+
     public void syncMappings() {
         List<UserPodMapping> mappings = listUserPods();
         mappings.forEach(mapping -> log.info("Synced user {} pod {} status {}",

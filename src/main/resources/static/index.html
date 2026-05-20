@@ -71,6 +71,11 @@
             color: #fff;
         }
         .btn-danger:hover { background: #ff7875; }
+        .btn-warning {
+            background: #faad14;
+            color: #fff;
+        }
+        .btn-warning:hover { background: #ffc53d; }
         .btn-default {
             background: #fff;
             color: #333;
@@ -498,6 +503,7 @@
                                 <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
                                 <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
                                 <button class="btn btn-default" onclick="showLogs('${userId}')">日志</button>
+                                <button class="btn btn-warning" onclick="restartPod('${userId}')">重启</button>
                                 <button class="btn btn-danger" onclick="deletePod('${userId}')">删除</button>
                             </div>
                         </td>
@@ -536,6 +542,20 @@
                 });
                 showToast('Pod 创建成功');
                 document.getElementById('newUserId').value = '';
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function restartPod(userId) {
+            if (!confirm(`确定要重启用户 ${userId} 的 Pod 吗？`)) return;
+            showLoading(true);
+            try {
+                await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/pod/restart`, {
+                    method: 'POST'
+                });
+                showToast('Pod 重启成功');
                 await loadPods();
             } finally {
                 showLoading(false);

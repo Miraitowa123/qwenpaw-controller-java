@@ -73,6 +73,16 @@ public class UserPodController {
         return Map.of("message", "Pod deleted successfully", "user_id", normalizedUserId);
     }
 
+    @PostMapping("/users/{userId}/pod/restart")
+    public UserPodResponse restartUserPod(@PathVariable String userId) {
+        String normalizedUserId = normalizeUserId(userId);
+        UserPodMapping mapping = podManager.restartUserPod(normalizedUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User pod not found or restart failed"));
+        UserPodResponse response = UserPodResponse.from(mapping);
+        response.setMessage("Pod restarted successfully");
+        return response;
+    }
+
     @GetMapping("/users/pods")
     public ListUserPodsResponse listUserPods() {
         List<UserPodResponse> users = podManager.listUserPods()
