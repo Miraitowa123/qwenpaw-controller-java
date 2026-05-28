@@ -36,6 +36,8 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |
 | GET | `/bocompawAdmin/api/v1/admin/config` | 获取 Controller ConfigMap |
 | PUT | `/bocompawAdmin/api/v1/admin/config` | 更新 Controller ConfigMap |
+| GET | `/bocompawAdmin/api/v1/admin/runtime-config` | 获取 QwenPaw 运行时变量 ConfigMap |
+| PUT | `/bocompawAdmin/api/v1/admin/runtime-config` | 更新运行时变量并刷新所有 QwenPaw Pod |
 | GET | `/bocompawAdmin/health` | 健康检查 |
 | GET | `/bocompawAdmin/ready` | 就绪检查 |
 
@@ -69,24 +71,26 @@ kubectl apply -f deployments/k8s.yaml
 
 控制器通过环境变量配置，主要配置如下：
 
-| 环境变量 | 默认值 | 说明 |
-|----------|--------|------|
-| SERVER_HOST | `0.0.0.0` | 服务监听地址 |
-| SERVER_PORT | `8080` | 服务端口 |
-| SERVER_LOG_LEVEL | `info` | 日志级别 |
-| K8S_NAMESPACE | `ai` | Kubernetes 命名空间 |
-| QWENPAW_APP_LABEL | `qwenpaw` | 用户 Pod app label |
+| 环境变量 | 默认值                                   | 说明 |
+|----------|---------------------------------------|------|
+| SERVER_HOST | `0.0.0.0`                             | 服务监听地址 |
+| SERVER_PORT | `8080`                                | 服务端口 |
+| SERVER_LOG_LEVEL | `info`                                | 日志级别 |
+| K8S_NAMESPACE | `ai`                                  | Kubernetes 命名空间 |
+| QWENPAW_APP_LABEL | `qwenpaw`                             | 用户 Pod app label |
 | QWENPAW_IMAGE | `docker.io/agentscope/qwenpaw:latest` | QwenPaw 镜像 |
-| QWENPAW_CONTAINER_PORT | `8088` | QwenPaw 容器端口 |
-| QWENPAW_CONFIGMAP_NAME | `qwenpaw-global-config` | QwenPaw 配置 ConfigMap |
-| QWENPAW_NAS_PVC_NAME | `qwenpaw-nas-pvc` | 用户数据 PVC |
-| GATEWAY_NAME | `traefik-gateway` | Gateway 名称 |
-| GATEWAY_NAMESPACE | `ai` | Gateway 命名空间 |
-| BASE_PATH_PREFIX | `/users` | 用户访问路径前缀 |
-| CONTROLLER_CONFIGMAP_NAME | `qwenpaw-controller-config` | Controller ConfigMap |
-| CONTROLLER_DEPLOYMENT_NAME | `qwenpaw-controller` | Controller Deployment |
-| POD_READY_TIMEOUT | `600` | 等待用户 Pod Ready 的超时时间，单位秒 |
-| STARTUP_SYNC_ENABLED | `false` | 启动时是否立即同步 Kubernetes Pod；集群部署清单中设为 `true` |
+| QWENPAW_CONTAINER_PORT | `8088`                                | QwenPaw 容器端口 |
+| QWENPAW_CONFIGMAP_NAME | `qwenpaw-global-config`               | QwenPaw 配置 ConfigMap |
+| QWENPAW_RUNTIME_CONFIGMAP_NAME | `qwenpaw-runtime-config`              | QwenPaw 运行时变量 ConfigMap，通过 envFrom 注入用户 Pod |
+| QWENPAW_NAS_PVC_NAME | `qwenpaw-nas-pvc`                     | 用户数据 PVC |
+| QWENPAW_PUBLIC_TEMPLATE_SUB_PATH | `public-secret`                       | 用户 Pod 初始化模板目录，位于用户数据 PVC 内 |
+| GATEWAY_NAME | `traefik-gateway`                     | Gateway 名称 |
+| GATEWAY_NAMESPACE | `ai`                                  | Gateway 命名空间 |
+| BASE_PATH_PREFIX | `/users`                              | 用户访问路径前缀 |
+| CONTROLLER_CONFIGMAP_NAME | `qwenpaw-controller-config`           | Controller ConfigMap |
+| CONTROLLER_DEPLOYMENT_NAME | `qwenpaw-controller`                  | Controller Deployment |
+| POD_READY_TIMEOUT | `600`                                 | 等待用户 Pod Ready 的超时时间，单位秒 |
+| STARTUP_SYNC_ENABLED | `false`                               | 启动时是否立即同步 Kubernetes Pod；集群部署清单中设为 `true` |
 
 ## 项目结构
 

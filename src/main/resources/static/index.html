@@ -303,6 +303,39 @@
             margin-top: 16px;
             justify-content: flex-end;
         }
+        .runtime-config-row {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr) auto;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .runtime-config-row input {
+            padding: 8px 12px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            min-width: 0;
+        }
+        .runtime-config-row input:focus {
+            outline: none;
+            border-color: #40a9ff;
+        }
+        .runtime-config-header {
+            display: grid;
+            grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr) auto;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+        }
+        .runtime-config-meta {
+            margin-bottom: 14px;
+            color: #666;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -326,6 +359,9 @@
             </button>
             <button class="btn btn-primary" onclick="showConfigModal()">
                 <span>&#9881;</span> 配置管理
+            </button>
+            <button class="btn btn-primary" onclick="showRuntimeConfigModal()">
+                <span>&#9881;</span> 配置中心
             </button>
         </div>
 
@@ -395,6 +431,32 @@
                 </label>
                 <button class="btn btn-default" onclick="loadConfig()">刷新</button>
                 <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配置中心弹窗 -->
+    <div class="modal-overlay" id="runtimeConfigModal">
+        <div class="modal" style="max-width: 760px;">
+            <div class="modal-header">
+                <h3>QwenPaw 配置中心</h3>
+                <button class="modal-close" onclick="closeModal('runtimeConfigModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="runtime-config-meta" id="runtimeConfigMeta"></div>
+                <div class="runtime-config-header">
+                    <div>变量名</div>
+                    <div>变量值</div>
+                    <div></div>
+                </div>
+                <div id="runtimeConfigContent">
+                    <p>加载中...</p>
+                </div>
+                <button class="btn btn-default" onclick="addRuntimeConfigRow()">添加变量</button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="loadRuntimeConfig()">刷新</button>
+                <button class="btn btn-primary" onclick="saveRuntimeConfig()">保存并刷新所有 QwenPaw Pod</button>
             </div>
         </div>
     </div>
@@ -658,6 +720,7 @@
         loadPods();
 
         let currentConfigData = {};
+        let currentRuntimeConfigData = {};
 
         async function loadConfig() {
             const content = document.getElementById('configContent');
@@ -724,6 +787,90 @@
         function showConfigModal() {
             openModal('configModal');
             loadConfig();
+        }
+
+        async function loadRuntimeConfig() {
+            const content = document.getElementById('runtimeConfigContent');
+            const meta = document.getElementById('runtimeConfigMeta');
+            content.innerHTML = '<p>加载中...</p>';
+            meta.textContent = '';
+            try {
+                const data = await apiRequest(`${API_BASE}/admin/runtime-config`);
+                currentRuntimeConfigData = data.data || {};
+                meta.textContent = `${data.namespace || '-'} / ${data.name || '-'}`;
+                renderRuntimeConfigEditor(currentRuntimeConfigData);
+            } catch (error) {
+                content.innerHTML = `<p style="color: #cf1322;">加载配置中心失败: ${error.message}</p>`;
+            }
+        }
+
+        function renderRuntimeConfigEditor(data) {
+            const content = document.getElementById('runtimeConfigContent');
+            const entries = Object.entries(data || {});
+            if (entries.length === 0) {
+                content.innerHTML = '';
+                addRuntimeConfigRow('env', 'uat');
+                return;
+            }
+            content.innerHTML = entries.map(([key, value]) => runtimeConfigRowHtml(key, value)).join('');
+        }
+
+        function runtimeConfigRowHtml(key = '', value = '') {
+            return `
+                <div class="runtime-config-row">
+                    <input type="text" data-role="runtime-key" value="${escapeHtml(key)}" placeholder="env" />
+                    <input type="text" data-role="runtime-value" value="${escapeHtml(value)}" placeholder="uat" />
+                    <button class="btn btn-danger" onclick="removeRuntimeConfigRow(this)">删除</button>
+                </div>
+            `;
+        }
+
+        function addRuntimeConfigRow(key = '', value = '') {
+            const content = document.getElementById('runtimeConfigContent');
+            if (content.querySelector('p')) content.innerHTML = '';
+            content.insertAdjacentHTML('beforeend', runtimeConfigRowHtml(key, value));
+        }
+
+        function removeRuntimeConfigRow(button) {
+            button.closest('.runtime-config-row').remove();
+        }
+
+        async function saveRuntimeConfig() {
+            const rows = document.querySelectorAll('#runtimeConfigContent .runtime-config-row');
+            const newData = {};
+            rows.forEach(row => {
+                const key = row.querySelector('[data-role="runtime-key"]').value.trim();
+                const value = row.querySelector('[data-role="runtime-value"]').value;
+                if (key) newData[key] = value;
+            });
+
+            if (Object.keys(newData).length === 0) {
+                showToast('请至少填写一个变量', 'error');
+                return;
+            }
+
+            if (!confirm('保存后会重启所有 QwenPaw 用户 Pod 来应用新的环境变量，确定继续吗？')) {
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const result = await apiRequest(`${API_BASE}/admin/runtime-config`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ data: newData })
+                });
+                currentRuntimeConfigData = newData;
+                showToast(`配置中心已保存，已刷新 ${result.restarted_deployments || 0} 个 Deployment`);
+                closeModal('runtimeConfigModal');
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showRuntimeConfigModal() {
+            openModal('runtimeConfigModal');
+            loadRuntimeConfig();
         }
     </script>
 </body>

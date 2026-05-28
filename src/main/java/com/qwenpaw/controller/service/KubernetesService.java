@@ -3,8 +3,11 @@ package com.qwenpaw.controller.service;
 import com.qwenpaw.controller.config.QwenPawProperties;
 import com.qwenpaw.controller.model.PodStatus;
 import io.fabric8.kubernetes.api.model.ConfigMap;
+import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
+import io.fabric8.kubernetes.api.model.EnvFromSource;
+import io.fabric8.kubernetes.api.model.EnvFromSourceBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSourceBuilder;
@@ -29,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -113,6 +117,7 @@ public class KubernetesService {
                         .withImage("busybox:1.35")
                         .withCommand("sh", "-c", initConfigCommand())
                         .withVolumeMounts(
+                                volumeMount("template-volume", "/app/qwenpaw-public", properties.getQwenpawPublicTemplateSubPath(), true),
                                 volumeMount("data-volume", "/app/working", userId + "/working"),
                                 volumeMount("secrets-volume", "/app/working.secret", userId + "/working.secret"),
                                 volumeMount("backups-volume", "/app/working.backups", userId + "/working.backups"))
@@ -135,11 +140,15 @@ public class KubernetesService {
                                 volumeMount("secrets-volume", "/app/working.secret", userId + "/working.secret"),
                                 volumeMount("backups-volume", "/app/working.backups", userId + "/working.backups"))
                         .withEnv(
+                                new EnvVarBuilder().withName("QWENPAW_WORKING_DIR").withValue("/app/working").build(),
+                                new EnvVarBuilder().withName("QWENPAW_SECRET_DIR").withValue("/app/working.secret").build(),
+                                new EnvVarBuilder().withName("QWENPAW_CONFIG_FILE").withValue("config.json").build(),
                                 new EnvVarBuilder().withName("USER_ID").withValue(userId).build(),
                                 new EnvVarBuilder().withName("QWENPAW_USER").withValue(userId).build(),
                                 new EnvVarBuilder().withName("QWENPAW_AUTH_ENABLED").withValue("true").build(),
                                 new EnvVarBuilder().withName("QWENPAW_AUTH_USERNAME").withValue("admin").build(),
                                 new EnvVarBuilder().withName("QWENPAW_AUTH_PASSWORD").withValue("admin123").build())
+                        .withEnvFrom(runtimeConfigEnvFrom())
                         .withNewLivenessProbe()
                         .withTcpSocket(new TCPSocketActionBuilder()
                                 .withNewPort(properties.getQwenpawContainerPort())
@@ -166,6 +175,7 @@ public class KubernetesService {
                                 .withName(properties.getQwenpawConfigmapName())
                                 .endConfigMap()
                                 .build(),
+                        pvcVolume("template-volume"),
                         pvcVolume("data-volume"),
                         pvcVolume("secrets-volume"),
                         pvcVolume("backups-volume"))
@@ -395,6 +405,35 @@ public class KubernetesService {
         return true;
     }
 
+    public int refreshQwenPawRuntimeConfig(Map<String, String> data) {
+        if (!updateConfigMap(properties.getQwenpawRuntimeConfigmapName(), data)) {
+            return -1;
+        }
+
+        int restarted = 0;
+        String restartedAt = OffsetDateTime.now(ZoneOffset.UTC).toString();
+        List<Deployment> deployments = client.apps()
+                .deployments()
+                .inNamespace(properties.getK8sNamespace())
+                .withLabel("app", properties.getQwenpawAppLabel())
+                .list()
+                .getItems();
+
+        for (Deployment deployment : deployments) {
+            Deployment updated = ensureRuntimeConfigEnvFrom(deployment, restartedAt);
+            client.apps()
+                    .deployments()
+                    .inNamespace(properties.getK8sNamespace())
+                    .resource(updated)
+                    .update();
+            restarted++;
+        }
+
+        log.info("Updated runtime ConfigMap {} and restarted {} QwenPaw deployments",
+                properties.getQwenpawRuntimeConfigmapName(), restarted);
+        return restarted;
+    }
+
     private Optional<GenericKubernetesResource> getHttpRoute(String routeName) {
         GenericKubernetesResource route = client.genericKubernetesResources(HTTP_ROUTE_CONTEXT)
                 .inNamespace(properties.getK8sNamespace())
@@ -440,6 +479,58 @@ public class KubernetesService {
         return Map.of("cpu", new Quantity(cpu), "memory", new Quantity(memory));
     }
 
+    private Deployment ensureRuntimeConfigEnvFrom(Deployment deployment, String restartedAt) {
+        DeploymentBuilder builder = new DeploymentBuilder(deployment)
+                .editSpec()
+                .editTemplate()
+                .editOrNewMetadata()
+                .addToAnnotations("kubectl.kubernetes.io/restartedAt", restartedAt)
+                .endMetadata()
+                .endTemplate()
+                .endSpec();
+
+        Deployment updated = builder.build();
+        List<Container> containers = updated.getSpec().getTemplate().getSpec().getContainers();
+        for (Container container : containers) {
+            if ("qwenpaw".equals(container.getName()) && !hasRuntimeConfigEnvFrom(container)) {
+                List<EnvFromSource> envFrom = container.getEnvFrom();
+                if (envFrom == null) {
+                    container.setEnvFrom(List.of(runtimeConfigEnvFrom()));
+                } else {
+                    envFrom = new ArrayList<>(envFrom);
+                    envFrom.add(runtimeConfigEnvFrom());
+                    container.setEnvFrom(envFrom);
+                }
+            }
+        }
+        return updated;
+    }
+
+    private boolean hasRuntimeConfigEnvFrom(Container container) {
+        List<EnvFromSource> envFrom = container.getEnvFrom();
+        if (envFrom == null) {
+            return false;
+        }
+        return envFrom.stream()
+                .anyMatch(source -> source.getConfigMapRef() != null
+                        && properties.getQwenpawRuntimeConfigmapName().equals(source.getConfigMapRef().getName()));
+    }
+
+    private EnvFromSource runtimeConfigEnvFrom() {
+        return new EnvFromSourceBuilder()
+                .withNewConfigMapRef(properties.getQwenpawRuntimeConfigmapName(), false)
+                .build();
+    }
+
+    private io.fabric8.kubernetes.api.model.VolumeMount volumeMount(String name, String mountPath, String subPath, boolean readOnly) {
+        return new VolumeMountBuilder()
+                .withName(name)
+                .withMountPath(mountPath)
+                .withSubPath(subPath)
+                .withReadOnly(readOnly)
+                .build();
+    }
+
     private io.fabric8.kubernetes.api.model.VolumeMount volumeMount(String name, String mountPath, String subPath) {
         return new VolumeMountBuilder()
                 .withName(name)
@@ -458,36 +549,10 @@ public class KubernetesService {
     }
 
     private String initConfigCommand() {
-        String providerConfig = bocomProviderConfig();
         return "mkdir -p /app/working /app/working.secret /app/working.backups && "
-                + "mkdir -p /app/working.secret/providers/custom /app/working.secret/providers/builtin /app/working.secret/providers/plugin && "
-                + "echo '{\"provider_id\":\"bocom-provider\",\"model\":\"MiniMax-M2.5\"}' > /app/working.secret/providers/active_model.json && "
-                + "echo '" + providerConfig + "' > /app/working.secret/providers/custom/bocom-provider.json";
-    }
-
-    private String bocomProviderConfig() {
-        return "{"
-                + "\"id\":\"bocom-provider\","
-                + "\"name\":\"bocom-provider\","
-                + "\"base_url\":\"http://12.244.66.225/llmproxy/v1/\","
-                + "\"api_key\":\"ENC:gAAAAABqC_MQSltcQqyqmJM_Fgi6l70DmJvqBGu091UcpvlKY3k39v-ptBp7n0JzhDwU8HvTmfMfYLr-o41nthzWOadJ6KED9A==\","
-                + "\"chat_model\":\"OpenAIChatModel\","
-                + "\"models\":[],"
-                + "\"extra_models\":["
-                + "{\"id\":\"MiniMax-M2.5\",\"name\":\"MiniMax-M2-5\",\"supports_multimodal\":false,\"supports_image\":false,\"supports_video\":false,\"probe_source\":\"probed\",\"is_free\":false,\"generate_kwargs\":{}},"
-                + "{\"id\":\"Qwen3.6-27B\",\"name\":\"Qwen3.6-27B\",\"supports_multimodal\":true,\"supports_image\":true,\"supports_video\":true,\"probe_source\":\"probed\",\"is_free\":false,\"generate_kwargs\":{}},"
-                + "{\"id\":\"Qwen3.6-35B-A3B\",\"name\":\"Qwen3.6-35B-A3B\",\"supports_multimodal\":true,\"supports_image\":true,\"supports_video\":true,\"probe_source\":\"probed\",\"is_free\":false,\"generate_kwargs\":{}}"
-                + "],"
-                + "\"api_key_prefix\":\"\","
-                + "\"is_local\":false,"
-                + "\"freeze_url\":false,"
-                + "\"require_api_key\":false,"
-                + "\"is_custom\":true,"
-                + "\"support_model_discovery\":false,"
-                + "\"support_connection_check\":false,"
-                + "\"generate_kwargs\":{},"
-                + "\"meta\":{}"
-                + "}";
+                + "cp -af /app/qwenpaw-public/working/. /app/working/ && "
+                + "cp -af /app/qwenpaw-public/working.secret/. /app/working.secret/ && "
+                + "if [ -d /app/qwenpaw-public/working.backups ]; then cp -af /app/qwenpaw-public/working.backups/. /app/working.backups/; fi";
     }
 
     private void sleep() {

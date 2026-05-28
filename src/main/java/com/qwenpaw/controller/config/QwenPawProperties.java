@@ -10,7 +10,9 @@ public class QwenPawProperties {
     private String qwenpawImage = "docker.io/agentscope/qwenpaw:latest";
     private int qwenpawContainerPort = 8088;
     private String qwenpawConfigmapName = "qwenpaw-global-config";
+    private String qwenpawRuntimeConfigmapName = "qwenpaw-runtime-config";
     private String qwenpawNasPvcName = "qwenpaw-nas-pvc";
+    private String qwenpawPublicTemplateSubPath = "public-secret";
     private String resourceRequestsCpu = "500m";
     private String resourceRequestsMemory = "1Gi";
     private String resourceLimitsCpu = "1";
@@ -71,12 +73,28 @@ public class QwenPawProperties {
         this.qwenpawConfigmapName = qwenpawConfigmapName;
     }
 
+    public String getQwenpawRuntimeConfigmapName() {
+        return qwenpawRuntimeConfigmapName;
+    }
+
+    public void setQwenpawRuntimeConfigmapName(String qwenpawRuntimeConfigmapName) {
+        this.qwenpawRuntimeConfigmapName = qwenpawRuntimeConfigmapName;
+    }
+
     public String getQwenpawNasPvcName() {
         return qwenpawNasPvcName;
     }
 
     public void setQwenpawNasPvcName(String qwenpawNasPvcName) {
         this.qwenpawNasPvcName = qwenpawNasPvcName;
+    }
+
+    public String getQwenpawPublicTemplateSubPath() {
+        return qwenpawPublicTemplateSubPath;
+    }
+
+    public void setQwenpawPublicTemplateSubPath(String qwenpawPublicTemplateSubPath) {
+        this.qwenpawPublicTemplateSubPath = qwenpawPublicTemplateSubPath;
     }
 
     public String getResourceRequestsCpu() {

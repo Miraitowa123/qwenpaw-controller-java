@@ -151,6 +151,35 @@ public class UserPodController {
                 restarted);
     }
 
+    @GetMapping("/admin/runtime-config")
+    public ConfigMapData getRuntimeConfig() {
+        Map<String, String> data = kubernetesService.getConfigMap(properties.getQwenpawRuntimeConfigmapName());
+        if (data == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "ConfigMap " + properties.getQwenpawRuntimeConfigmapName() + " not found");
+        }
+        return new ConfigMapData(properties.getQwenpawRuntimeConfigmapName(), properties.getK8sNamespace(), data);
+    }
+
+    @PutMapping("/admin/runtime-config")
+    public Map<String, Object> updateRuntimeConfig(@RequestBody UpdateConfigRequest request) {
+        if (request.getData() == null || request.getData().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Config data cannot be empty");
+        }
+
+        Map<String, String> data = new LinkedHashMap<>(request.getData());
+        int restarted = kubernetesService.refreshQwenPawRuntimeConfig(data);
+        if (restarted < 0) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update runtime ConfigMap");
+        }
+
+        return Map.of(
+                "success", true,
+                "message", "Runtime ConfigMap updated successfully",
+                "updated_keys", List.copyOf(data.keySet()),
+                "restarted_deployments", restarted);
+    }
+
     private String normalizeUserId(String userId) {
         if (userId == null || userId.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "user_id is required");

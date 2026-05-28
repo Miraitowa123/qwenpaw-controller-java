@@ -27,7 +27,9 @@ qwenpaw:
   qwenpaw-image: ${QWENPAW_IMAGE:docker.io/agentscope/qwenpaw:latest}
   qwenpaw-container-port: ${QWENPAW_CONTAINER_PORT:8088}
   qwenpaw-configmap-name: ${QWENPAW_CONFIGMAP_NAME:qwenpaw-global-config}
+  qwenpaw-runtime-configmap-name: ${QWENPAW_RUNTIME_CONFIGMAP_NAME:qwenpaw-runtime-config}
   qwenpaw-nas-pvc-name: ${QWENPAW_NAS_PVC_NAME:qwenpaw-nas-pvc}
+  qwenpaw-public-template-sub-path: ${QWENPAW_PUBLIC_TEMPLATE_SUB_PATH:public-secret}
   resource-requests-cpu: ${RESOURCE_REQUESTS_CPU:500m}
   resource-requests-memory: ${RESOURCE_REQUESTS_MEMORY:1Gi}
   resource-limits-cpu: ${RESOURCE_LIMITS_CPU:1}

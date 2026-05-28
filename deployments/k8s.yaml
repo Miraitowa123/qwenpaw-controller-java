@@ -91,7 +91,9 @@ data:
   QWENPAW_IMAGE: "docker.io/agentscope/qwenpaw:latest"
   QWENPAW_CONTAINER_PORT: "8088"
   QWENPAW_CONFIGMAP_NAME: "qwenpaw-global-config"
+  QWENPAW_RUNTIME_CONFIGMAP_NAME: "qwenpaw-runtime-config"
   QWENPAW_NAS_PVC_NAME: "qwenpaw-nas-pvc"
+  QWENPAW_PUBLIC_TEMPLATE_SUB_PATH: "public-secret"
   RESOURCE_REQUESTS_CPU: "500m"
   RESOURCE_REQUESTS_MEMORY: "1Gi"
   RESOURCE_LIMITS_CPU: "1"
@@ -106,7 +108,19 @@ data:
 
 ---
 # =========================
-# 6. Deployment
+# 6. QwenPaw Runtime ConfigMap
+# =========================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qwenpaw-runtime-config
+  namespace: ai
+data:
+  env: "uat"
+
+---
+# =========================
+# 7. Deployment
 # =========================
 apiVersion: apps/v1
 kind: Deployment
@@ -163,7 +177,7 @@ spec:
             failureThreshold: 2
 ---
 # =========================
-# 7. Service
+# 8. Service
 # =========================
 apiVersion: v1
 kind: Service
@@ -183,7 +197,7 @@ spec:
 
 ---
 # =========================
-# 8. Gateway API - HTTPRoute
+# 9. Gateway API - HTTPRoute
 # =========================
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
