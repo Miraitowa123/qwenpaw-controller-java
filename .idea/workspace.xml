@@ -4,35 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、working和working.secret等文件配置从nas到qwenpaw实例内部2、修改pod内的系统环境参数配置">
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules/qwenpaw-controller-java.main.iml" afterDir="false" />
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/QwenPawControllerApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/QwenPawControllerApplication.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/KubernetesClientConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/KubernetesClientConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ConfigMapData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ConfigMapData.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ErrorResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ErrorResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/HealthResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/HealthResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ListUserPodsResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/ListUserPodsResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/PodStatus.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/PodStatus.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UpdateConfigRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UpdateConfigRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UpdateConfigResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UpdateConfigResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodMapping.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodMapping.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PodManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PodManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/ApiExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/ApiExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/HealthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/HealthController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/IndexController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/IndexController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/qwenpaw-login.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/qwenpaw-login.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -158,7 +132,7 @@
       <workItem from="1779180837144" duration="85000" />
       <workItem from="1779180926748" duration="3401000" />
       <workItem from="1779848423143" duration="12914000" />
-      <workItem from="1779945951487" duration="61835000" />
+      <workItem from="1779945951487" duration="63619000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -176,7 +150,15 @@
       <option name="project" value="LOCAL" />
       <updated>1779972844761</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作">
+      <option name="closed" value="true" />
+      <created>1780554989338</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1780554989338</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -196,6 +178,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="commit" />
     <MESSAGE value="1、working和working.secret等文件配置从nas到qwenpaw实例内部2、修改pod内的系统环境参数配置" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、working和working.secret等文件配置从nas到qwenpaw实例内部2、修改pod内的系统环境参数配置" />
+    <MESSAGE value="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作" />
   </component>
 </project>
