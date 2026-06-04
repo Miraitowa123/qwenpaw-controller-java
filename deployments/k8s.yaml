@@ -34,6 +34,10 @@ rules:
   - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
+  # Pod terminal exec access
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
   # Service management
   - apiGroups: [""]
     resources: ["services"]
@@ -94,6 +98,8 @@ data:
   QWENPAW_RUNTIME_CONFIGMAP_NAME: "qwenpaw-runtime-config"
   QWENPAW_NAS_PVC_NAME: "qwenpaw-nas-pvc"
   QWENPAW_PUBLIC_TEMPLATE_SUB_PATH: "public-secret"
+  QWENPAW_VOLUME_MODE: "single-mount"
+  QWENPAW_NAS_MOUNT_PATH: "/qwenpaw_nas"
   RESOURCE_REQUESTS_CPU: "500m"
   RESOURCE_REQUESTS_MEMORY: "1Gi"
   RESOURCE_LIMITS_CPU: "1"
@@ -144,7 +150,7 @@ spec:
       serviceAccountName: qwenpaw-controller
       containers:
         - name: controller
-          image: docker.io/library/qwenpaw-controller-java:0.1.2
+          image: qwenpaw-controller-java:0.1.8
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

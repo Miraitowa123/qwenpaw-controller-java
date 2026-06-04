@@ -47,25 +47,33 @@
     </main>
 
     <script>
+        // 自动登录 QwenPaw 使用的固定账号参数。
         const LOGIN_PAYLOAD = {
             username: 'admin',
             password: 'admin123',
             expires_in: 86400
         };
 
+        // 页面中展示登录状态或错误信息的元素。
         const messageEl = document.getElementById('message');
 
+        // 更新页面提示文案，并按是否错误切换样式。
         function setMessage(message, isError = false) {
             messageEl.textContent = message;
             messageEl.classList.toggle('error', isError);
         }
 
+        // 设置 userid Cookie，网关会根据这个 Cookie 把请求分流到对应用户 Pod。
         function setUserCookie(userId) {
             document.cookie = `userid=${encodeURIComponent(userId)}; path=/`;
         }
 
+        // 从 URL 获取 user_id，登录 QwenPaw 后跳转到聊天页。
         async function loginAndRedirect() {
+            // params 保存当前页面 URL 查询参数。
             const params = new URLSearchParams(window.location.search);
+
+            // userId 是管理台打开用户实例时传入的业务用户 ID。
             const userId = params.get('user_id');
 
             if (!userId) {
@@ -75,6 +83,7 @@
 
             setUserCookie(userId);
 
+            // response 是 QwenPaw 登录接口返回结果。
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 credentials: 'include',
@@ -83,10 +92,12 @@
             });
 
             if (!response.ok) {
+                // errorText 尽量保留后端返回的失败原因。
                 const errorText = await response.text().catch(() => '');
                 throw new Error(errorText || `登录失败，HTTP ${response.status}`);
             }
 
+            // data 中应包含 QwenPaw 前端后续请求使用的 token。
             const data = await response.json();
             if (!data.token) {
                 throw new Error('登录响应缺少 token。');
@@ -96,6 +107,7 @@
             window.location.replace('/chat');
         }
 
+        // 页面加载后立即执行自动登录，失败时停留在当前页展示原因。
         loginAndRedirect().catch(error => {
             setMessage(error.message || '登录失败。', true);
         });

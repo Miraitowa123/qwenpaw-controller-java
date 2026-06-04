@@ -84,6 +84,8 @@ kubectl apply -f deployments/k8s.yaml
 | QWENPAW_RUNTIME_CONFIGMAP_NAME | `qwenpaw-runtime-config`              | QwenPaw 运行时变量 ConfigMap，通过 envFrom 注入用户 Pod |
 | QWENPAW_NAS_PVC_NAME | `qwenpaw-nas-pvc`                     | 用户数据 PVC |
 | QWENPAW_PUBLIC_TEMPLATE_SUB_PATH | `public-secret`                       | 用户 Pod 初始化模板目录，位于用户数据 PVC 内 |
+| QWENPAW_VOLUME_MODE | `subpath`                             | PVC 挂载模式；`subpath` 隔离用户目录，`single-mount` 用于 Docker Desktop 本地调试 |
+| QWENPAW_NAS_MOUNT_PATH | `/qwenpaw_nas`                        | `single-mount` 模式下容器内 NAS 根目录 |
 | GATEWAY_NAME | `traefik-gateway`                     | Gateway 名称 |
 | GATEWAY_NAMESPACE | `ai`                                  | Gateway 命名空间 |
 | BASE_PATH_PREFIX | `/users`                              | 用户访问路径前缀 |

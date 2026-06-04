@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QwenPaw Pod 管理</title>
+    <link rel="stylesheet" href="vendor/xterm/xterm.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -336,6 +337,38 @@
             color: #666;
             font-size: 13px;
         }
+        .terminal-modal {
+            max-width: 1040px;
+            width: 92%;
+        }
+        .terminal-wrap {
+            background: #101418;
+            border: 1px solid #2b333b;
+            border-radius: 6px;
+            min-height: 540px;
+            max-height: 65vh;
+            overflow-y: auto;
+            padding: 14px;
+            cursor: text;
+        }
+        .terminal-wrap .xterm {
+            height: 100%;
+        }
+        .terminal-wrap .xterm-viewport,
+        .terminal-wrap .xterm-screen {
+            min-height: 512px;
+        }
+        .terminal-status {
+            color: #666;
+            font-size: 13px;
+            margin-right: auto;
+        }
+        .terminal-status.connected {
+            color: #389e0d;
+        }
+        .terminal-status.error {
+            color: #cf1322;
+        }
     </style>
 </head>
 <body>
@@ -461,6 +494,26 @@
         </div>
     </div>
 
+    <!-- 终端弹窗 -->
+    <div class="modal-overlay" id="terminalModal">
+        <div class="modal terminal-modal">
+            <div class="modal-header">
+                <h3 id="terminalModalTitle">Pod 终端</h3>
+                <button class="modal-close" onclick="closeTerminal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="terminal-wrap" id="terminalWrap" onclick="focusTerminal()">
+                    <div id="terminalOutput"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="terminal-status" id="terminalStatus">未连接</span>
+                <button class="btn btn-default" onclick="clearTerminal()">清屏</button>
+                <button class="btn btn-primary" onclick="closeTerminal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 加载遮罩 -->
     <div class="loading-overlay" id="loadingOverlay">
         <div class="spinner-large"></div>
@@ -469,17 +522,38 @@
     <!-- Toast 提示 -->
     <div class="toast" id="toast"></div>
 
+    <script src="vendor/xterm/xterm.js"></script>
     <script>
-        // 支持从 /bocompawAdmin 或 / 路径访问
+        // 当前页面的部署前缀，支持从 /bocompawAdmin 或 / 路径访问。
         const basePath = window.location.pathname.startsWith('/bocompawAdmin') ? '/bocompawAdmin' : '';
+
+        // 后端 REST API 的统一前缀。
         const API_BASE = basePath + '/api/v1';
+
+        // 当前日志弹窗正在查看的用户 ID。
         let currentLogUserId = null;
+
+        // 当前详情弹窗展示的 Pod 数据。
         let currentDetail = null;
 
+        // 当前浏览器终端连接使用的 WebSocket。
+        let terminalSocket = null;
+
+        // 当前浏览器终端连接的用户 ID。
+        let terminalUserId = null;
+
+        // xterm.js 创建的终端实例。
+        let terminalInstance = null;
+
+        // xterm.js onData 注册返回的释放句柄。
+        let terminalDataDisposable = null;
+
+        // 控制全局加载遮罩显示和隐藏。
         function showLoading(show) {
             document.getElementById('loadingOverlay').classList.toggle('active', show);
         }
 
+        // 展示页面右上角 Toast 提示。
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -487,6 +561,7 @@
             setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
+        // 统一发起 API 请求并处理错误提示。
         async function apiRequest(url, options = {}) {
             try {
                 const response = await fetch(url, {
@@ -504,6 +579,7 @@
             }
         }
 
+        // 把后端 Pod 状态转换成对应的 CSS 类名。
         function getStatusClass(status) {
             const map = {
                 'running': 'status-running',
@@ -516,12 +592,14 @@
             return map[status?.toLowerCase()] || 'status-unknown';
         }
 
+        // 格式化后端返回的时间字符串。
         function formatDate(dateStr) {
             if (!dateStr) return '-';
             const d = new Date(dateStr);
             return d.toLocaleString('zh-CN');
         }
 
+        // 加载所有用户 Pod 并刷新列表。
         async function loadPods() {
             showLoading(true);
             try {
@@ -532,6 +610,7 @@
             }
         }
 
+        // 根据 Pod 列表渲染管理台表格。
         function renderPodTable(pods) {
             const container = document.getElementById('podTableContainer');
             if (!pods || pods.length === 0) {
@@ -547,6 +626,7 @@
                 return;
             }
 
+            // rows 是表格 tbody 的 HTML 字符串。
             const rows = pods.map(pod => {
                 const userId = escapeHtml(pod.user_id);
                 const podName = escapeHtml(pod.pod_name);
@@ -565,6 +645,7 @@
                                 <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
                                 <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
                                 <button class="btn btn-default" onclick="showLogs('${userId}')">日志</button>
+                                <button class="btn btn-default" onclick="showTerminal('${userId}')">终端</button>
                                 <button class="btn btn-warning" onclick="restartPod('${userId}')">重启</button>
                                 <button class="btn btn-danger" onclick="deletePod('${userId}')">删除</button>
                             </div>
@@ -591,6 +672,7 @@
             `;
         }
 
+        // 根据输入框中的用户 ID 创建或获取用户 Pod。
         async function createPod() {
             const userId = document.getElementById('newUserId').value.trim();
             if (!userId) {
@@ -610,6 +692,7 @@
             }
         }
 
+        // 调用后端重启指定用户 Pod。
         async function restartPod(userId) {
             if (!confirm(`确定要重启用户 ${userId} 的 Pod 吗？`)) return;
             showLoading(true);
@@ -624,6 +707,7 @@
             }
         }
 
+        // 删除指定用户 Pod 相关的 Kubernetes 资源。
         async function deletePod(userId) {
             if (!confirm(`确定要删除用户 ${userId} 的 Pod 吗？`)) return;
             showLoading(true);
@@ -638,11 +722,13 @@
             }
         }
 
+        // 打开 QwenPaw 登录跳转页，并带上用户 ID。
         function openUserChat(userId) {
             const loginUrl = `${basePath}/qwenpaw-login.html?user_id=${encodeURIComponent(userId)}`;
             window.open(loginUrl, '_blank');
         }
 
+        // 打开日志弹窗并加载当前用户日志。
         async function showLogs(userId) {
             currentLogUserId = userId;
             document.getElementById('logModalTitle').textContent = `Pod 日志 - ${userId}`;
@@ -651,6 +737,7 @@
             await refreshLog();
         }
 
+        // 刷新当前日志弹窗中的日志内容。
         async function refreshLog() {
             if (!currentLogUserId) return;
             try {
@@ -661,6 +748,7 @@
             }
         }
 
+        // 打开 Pod 详情弹窗并展示当前用户资源信息。
         async function showDetail(userId) {
             showLoading(true);
             try {
@@ -684,6 +772,7 @@
             }
         }
 
+        // 触发后端同步已有 Pod 映射。
         async function syncPods() {
             showLoading(true);
             try {
@@ -695,33 +784,46 @@
             }
         }
 
+        // 打开指定弹窗。
         function openModal(id) {
             document.getElementById(id).classList.add('active');
         }
 
+        // 关闭指定弹窗，并按弹窗类型清理状态。
         function closeModal(id) {
             document.getElementById(id).classList.remove('active');
             if (id === 'logModal') currentLogUserId = null;
+            if (id === 'terminalModal') closeTerminal();
         }
 
-        // 点击遮罩关闭弹窗
+        // 点击遮罩关闭弹窗。
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
-                if (e.target === overlay) overlay.classList.remove('active');
+                if (e.target === overlay) {
+                    if (overlay.id === 'terminalModal') {
+                        closeTerminal();
+                    } else {
+                        overlay.classList.remove('active');
+                    }
+                }
             });
         });
 
-        // 回车创建
+        // 在用户 ID 输入框按回车时创建 Pod。
         document.getElementById('newUserId').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') createPod();
         });
 
-        // 页面加载时获取数据
+        // 页面加载时获取 Pod 列表。
         loadPods();
 
+        // 当前控制器 ConfigMap 的 data 数据。
         let currentConfigData = {};
+
+        // 当前运行时环境变量 ConfigMap 的 data 数据。
         let currentRuntimeConfigData = {};
 
+        // 加载控制器自身配置 ConfigMap。
         async function loadConfig() {
             const content = document.getElementById('configContent');
             content.innerHTML = '<p>加载中...</p>';
@@ -734,12 +836,14 @@
             }
         }
 
+        // 把控制器 ConfigMap data 渲染成可编辑表单。
         function renderConfigEditor(data) {
             const content = document.getElementById('configContent');
             if (!data || Object.keys(data).length === 0) {
                 content.innerHTML = '<p>暂无配置数据</p>';
                 return;
             }
+            // items 是每个配置项输入行的 HTML。
             const items = Object.entries(data).map(([key, value]) => `
                 <div class="config-item">
                     <label>${escapeHtml(key)}</label>
@@ -749,6 +853,7 @@
             content.innerHTML = `<div class="config-grid">${items}</div>`;
         }
 
+        // 转义即将写入 innerHTML 的文本，避免配置值破坏页面结构。
         function escapeHtml(text) {
             if (text == null) return '';
             return String(text)
@@ -758,13 +863,16 @@
                 .replace(/"/g, '&quot;');
         }
 
+        // 保存控制器 ConfigMap，并可选触发控制器 Deployment 滚动重启。
         async function saveConfig() {
             const inputs = document.querySelectorAll('#configContent input[data-key]');
+            // newData 收集表单中的最新 ConfigMap data。
             const newData = {};
             inputs.forEach(input => {
                 newData[input.dataset.key] = input.value;
             });
 
+            // restart 表示保存后是否触发后端重启控制器 Deployment。
             const restart = document.getElementById('restartAfterUpdate').checked;
 
             showLoading(true);
@@ -784,11 +892,13 @@
             }
         }
 
+        // 打开控制器配置弹窗并加载最新配置。
         function showConfigModal() {
             openModal('configModal');
             loadConfig();
         }
 
+        // 加载注入用户 Pod 的运行时环境变量 ConfigMap。
         async function loadRuntimeConfig() {
             const content = document.getElementById('runtimeConfigContent');
             const meta = document.getElementById('runtimeConfigMeta');
@@ -804,8 +914,10 @@
             }
         }
 
+        // 把运行时环境变量 ConfigMap 渲染成可增删的键值行。
         function renderRuntimeConfigEditor(data) {
             const content = document.getElementById('runtimeConfigContent');
+            // entries 是 ConfigMap data 的键值数组。
             const entries = Object.entries(data || {});
             if (entries.length === 0) {
                 content.innerHTML = '';
@@ -815,6 +927,7 @@
             content.innerHTML = entries.map(([key, value]) => runtimeConfigRowHtml(key, value)).join('');
         }
 
+        // 生成一行运行时环境变量编辑 HTML。
         function runtimeConfigRowHtml(key = '', value = '') {
             return `
                 <div class="runtime-config-row">
@@ -825,18 +938,22 @@
             `;
         }
 
+        // 在运行时环境变量表单末尾新增一行。
         function addRuntimeConfigRow(key = '', value = '') {
             const content = document.getElementById('runtimeConfigContent');
             if (content.querySelector('p')) content.innerHTML = '';
             content.insertAdjacentHTML('beforeend', runtimeConfigRowHtml(key, value));
         }
 
+        // 删除一行运行时环境变量。
         function removeRuntimeConfigRow(button) {
             button.closest('.runtime-config-row').remove();
         }
 
+        // 保存运行时环境变量 ConfigMap，并触发所有用户 Deployment 刷新。
         async function saveRuntimeConfig() {
             const rows = document.querySelectorAll('#runtimeConfigContent .runtime-config-row');
+            // newData 收集所有非空 key 的环境变量。
             const newData = {};
             rows.forEach(row => {
                 const key = row.querySelector('[data-role="runtime-key"]').value.trim();
@@ -849,6 +966,7 @@
                 return;
             }
 
+            // 保存运行时变量会影响所有用户 Pod，所以前端二次确认。
             if (!confirm('保存后会重启所有 QwenPaw 用户 Pod 来应用新的环境变量，确定继续吗？')) {
                 return;
             }
@@ -868,10 +986,223 @@
             }
         }
 
+        // 打开运行时环境变量配置弹窗并加载最新配置。
         function showRuntimeConfigModal() {
             openModal('runtimeConfigModal');
             loadRuntimeConfig();
         }
+
+        // 打开指定用户的 Pod 终端弹窗。
+        function showTerminal(userId) {
+            terminalUserId = userId;
+            document.getElementById('terminalModalTitle').textContent = `Pod 终端 - ${userId}`;
+            resetTerminal();
+            setTerminalStatus('连接中...');
+            openModal('terminalModal');
+            connectTerminal(userId);
+            setTimeout(() => {
+                fitTerminal();
+                sendTerminalResize();
+                focusTerminal();
+            }, 80);
+        }
+
+        // 建立浏览器到后端终端接口的 WebSocket 连接。
+        function connectTerminal(userId) {
+            closeTerminalSocket();
+            // protocol 根据当前页面协议选择 ws 或 wss。
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // wsUrl 带 user_id，后端据此找到对应用户 Pod。
+            const wsUrl = `${protocol}//${window.location.host}${API_BASE}/terminal?user_id=${encodeURIComponent(userId)}`;
+            terminalSocket = new WebSocket(wsUrl);
+
+            terminalSocket.onopen = () => {
+                setTerminalStatus('已连接', 'connected');
+                sendTerminalResize();
+            };
+            terminalSocket.onmessage = (event) => appendTerminal(event.data);
+            terminalSocket.onerror = () => {
+                setTerminalStatus('连接异常', 'error');
+                appendTerminal('\r\n[terminal] 连接异常\r\n');
+            };
+            terminalSocket.onclose = () => {
+                if (document.getElementById('terminalModal').classList.contains('active')) {
+                    setTerminalStatus('已断开');
+                    appendTerminal('\r\n[terminal] 连接已断开\r\n');
+                }
+                terminalSocket = null;
+            };
+        }
+
+        // 关闭终端弹窗并释放终端实例。
+        function closeTerminal() {
+            closeTerminalSocket();
+            disposeTerminal();
+            terminalUserId = null;
+            document.getElementById('terminalModal').classList.remove('active');
+            setTerminalStatus('未连接');
+        }
+
+        // 关闭当前 WebSocket 终端连接。
+        function closeTerminalSocket() {
+            if (terminalSocket) {
+                // socket 保存当前连接引用，先清空全局变量再关闭，避免 onclose 重复处理旧连接。
+                const socket = terminalSocket;
+                terminalSocket = null;
+                socket.close();
+            }
+        }
+
+        // 更新终端弹窗底部连接状态。
+        function setTerminalStatus(text, type = '') {
+            const status = document.getElementById('terminalStatus');
+            status.textContent = text;
+            status.className = `terminal-status ${type}`.trim();
+        }
+
+        // 向 xterm 终端写入后端输出文本。
+        function appendTerminal(text) {
+            ensureTerminal();
+            terminalInstance.write(text);
+        }
+
+        // 清空 xterm 终端显示内容。
+        function clearTerminal() {
+            ensureTerminal();
+            terminalInstance.clear();
+            focusTerminal();
+        }
+
+        // 聚焦 xterm 终端，方便用户继续输入命令。
+        function focusTerminal() {
+            ensureTerminal();
+            terminalInstance.focus();
+        }
+
+        // 把用户在 xterm 中输入的字符发送给后端 exec stdin。
+        function sendTerminal(data) {
+            if (!terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
+                showToast('终端未连接', 'error');
+                return;
+            }
+            terminalSocket.send(JSON.stringify({ type: 'input', data }));
+        }
+
+        // 把当前 xterm 行列数同步给后端 Kubernetes exec TTY。
+        function sendTerminalResize() {
+            if (!terminalInstance || !terminalSocket || terminalSocket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            terminalSocket.send(JSON.stringify({
+                type: 'resize',
+                cols: terminalInstance.cols,
+                rows: terminalInstance.rows
+            }));
+        }
+
+        // 重建 xterm 实例。
+        function resetTerminal() {
+            disposeTerminal();
+            ensureTerminal();
+        }
+
+        // 确保 xterm 实例已经创建。
+        function ensureTerminal() {
+            if (terminalInstance) {
+                return;
+            }
+            // TerminalCtor 兼容不同打包格式暴露出来的 xterm 构造函数。
+            const TerminalCtor = getTerminalConstructor();
+            terminalInstance = new TerminalCtor({
+                cursorBlink: true,
+                convertEol: true,
+                fontFamily: '"Menlo", "Monaco", "Consolas", monospace',
+                fontSize: 13,
+                lineHeight: 1.25,
+                scrollback: 2000,
+                tabStopWidth: 8,
+                theme: {
+                    background: '#101418',
+                    foreground: '#d7dde4',
+                    cursor: '#ffffff',
+                    selectionBackground: '#35506b'
+                }
+            });
+            terminalInstance.open(document.getElementById('terminalOutput'));
+            // terminalDataDisposable 用于弹窗关闭时解绑输入事件。
+            terminalDataDisposable = terminalInstance.onData(data => sendTerminal(data));
+            fitTerminal();
+        }
+
+        // 获取 xterm.js 暴露的 Terminal 构造函数。
+        function getTerminalConstructor() {
+            const terminalCtor = window.Terminal
+                || (window.Xterm && window.Xterm.Terminal)
+                || (window.exports && window.exports.Terminal)
+                || (window.module && window.module.exports && window.module.exports.Terminal);
+            if (typeof terminalCtor !== 'function') {
+                throw new Error('xterm.js 未加载成功，无法打开终端');
+            }
+            return terminalCtor;
+        }
+
+        // 释放 xterm 实例和输入事件监听。
+        function disposeTerminal() {
+            if (terminalDataDisposable) {
+                terminalDataDisposable.dispose();
+                terminalDataDisposable = null;
+            }
+            if (terminalInstance) {
+                terminalInstance.dispose();
+                terminalInstance = null;
+            }
+            document.getElementById('terminalOutput').innerHTML = '';
+        }
+
+        // 根据终端容器尺寸重新计算 xterm 行列数。
+        function fitTerminal() {
+            if (!terminalInstance) {
+                return;
+            }
+            const wrap = document.getElementById('terminalWrap');
+            // width 和 height 预留内边距，避免终端内容贴边。
+            const width = Math.max(wrap.clientWidth - 28, 300);
+            const height = Math.max(wrap.clientHeight - 28, 300);
+            const geometry = measureTerminalGeometry();
+            const cols = Math.max(40, Math.floor(width / geometry.cellWidth));
+            const rows = Math.max(12, Math.floor(height / geometry.cellHeight));
+            if (cols !== terminalInstance.cols || rows !== terminalInstance.rows) {
+                terminalInstance.resize(cols, rows);
+            }
+        }
+
+        // 通过隐藏探针元素测量终端单元格宽高。
+        function measureTerminalGeometry() {
+            const probe = document.createElement('span');
+            probe.textContent = 'W';
+            probe.style.position = 'absolute';
+            probe.style.visibility = 'hidden';
+            probe.style.fontFamily = '"Menlo", "Monaco", "Consolas", monospace';
+            probe.style.fontSize = '13px';
+            probe.style.lineHeight = '1.25';
+            document.body.appendChild(probe);
+            // rect 是当前字体下单个字符的近似尺寸。
+            const rect = probe.getBoundingClientRect();
+            document.body.removeChild(probe);
+            return {
+                cellWidth: Math.max(rect.width, 7),
+                cellHeight: Math.max(rect.height, 16)
+            };
+        }
+
+        // 窗口大小变化时同步调整已打开终端的行列数。
+        window.addEventListener('resize', () => {
+            if (!document.getElementById('terminalModal').classList.contains('active')) {
+                return;
+            }
+            fitTerminal();
+            sendTerminalResize();
+        });
     </script>
 </body>
 </html>
