@@ -4,9 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作">
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1.新增终端小黑窗的相关资源">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -132,7 +135,7 @@
       <workItem from="1779180837144" duration="85000" />
       <workItem from="1779180926748" duration="3401000" />
       <workItem from="1779848423143" duration="12914000" />
-      <workItem from="1779945951487" duration="63619000" />
+      <workItem from="1779945951487" duration="74320000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -158,7 +161,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780554989338</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="1.新增终端小黑窗的相关资源">
+      <option name="closed" value="true" />
+      <created>1780557640543</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1780557640543</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -179,6 +190,7 @@
     <MESSAGE value="commit" />
     <MESSAGE value="1、working和working.secret等文件配置从nas到qwenpaw实例内部2、修改pod内的系统环境参数配置" />
     <MESSAGE value="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作" />
-    <option name="LAST_COMMIT_MESSAGE" value="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作" />
+    <MESSAGE value="1.新增终端小黑窗的相关资源" />
+    <option name="LAST_COMMIT_MESSAGE" value="1.新增终端小黑窗的相关资源" />
   </component>
 </project>

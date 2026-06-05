@@ -8,6 +8,7 @@ import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.ContainerPortBuilder;
 import io.fabric8.kubernetes.api.model.EnvFromSource;
 import io.fabric8.kubernetes.api.model.EnvFromSourceBuilder;
+import io.fabric8.kubernetes.api.model.EnvVar;
 import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSourceBuilder;
@@ -174,15 +175,7 @@ public class KubernetesService {
                                 .withLimits(resourceMap(properties.getResourceLimitsCpu(), properties.getResourceLimitsMemory()))
                                 .build())
                         .withVolumeMounts(qwenpawVolumeMounts)
-                        .withEnv(
-                                new EnvVarBuilder().withName("QWENPAW_WORKING_DIR").withValue(userWorkingDir(userId)).build(),
-                                new EnvVarBuilder().withName("QWENPAW_SECRET_DIR").withValue(userSecretDir(userId)).build(),
-                                new EnvVarBuilder().withName("QWENPAW_CONFIG_FILE").withValue("config.json").build(),
-                                new EnvVarBuilder().withName("USER_ID").withValue(userId).build(),
-                                new EnvVarBuilder().withName("QWENPAW_USER").withValue(userId).build(),
-                                new EnvVarBuilder().withName("QWENPAW_AUTH_ENABLED").withValue("true").build(),
-                                new EnvVarBuilder().withName("QWENPAW_AUTH_USERNAME").withValue("admin").build(),
-                                new EnvVarBuilder().withName("QWENPAW_AUTH_PASSWORD").withValue("admin123").build())
+                        .withEnv(qwenpawExplicitEnv(userId))
                         // envFrom 会把运行时 ConfigMap 的所有 key 注入为环境变量。
                         .withEnvFrom(runtimeConfigEnvFrom())
                         .withNewLivenessProbe()
@@ -693,6 +686,20 @@ public class KubernetesService {
         return new EnvFromSourceBuilder()
                 .withNewConfigMapRef(properties.getQwenpawRuntimeConfigmapName(), false)
                 .build();
+    }
+
+    /**
+     * 只保留每个用户 Pod 独有、无法放进全局 ConfigMap 的变量。
+     */
+    private List<EnvVar> qwenpawExplicitEnv(String userId) {
+        List<EnvVar> env = new ArrayList<>();
+        if (isSingleMountMode()) {
+            env.add(new EnvVarBuilder().withName("QWENPAW_WORKING_DIR").withValue(userWorkingDir(userId)).build());
+            env.add(new EnvVarBuilder().withName("QWENPAW_SECRET_DIR").withValue(userSecretDir(userId)).build());
+        }
+        env.add(new EnvVarBuilder().withName("USER_ID").withValue(userId).build());
+        env.add(new EnvVarBuilder().withName("QWENPAW_USER").withValue(userId).build());
+        return env;
     }
 
     /**

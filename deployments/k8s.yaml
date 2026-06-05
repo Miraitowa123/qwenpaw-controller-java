@@ -122,7 +122,23 @@ metadata:
   name: qwenpaw-runtime-config
   namespace: ai
 data:
-  env: "uat"
+  RUN_ENV: "UAT"
+  QWENPAW_DISABLED_CHANNELS: "imessage,discord,feishu,qq,telegram,mattermost,matt,matrix,voice,wecom,xiaoyi"
+  QWENPAW_ENABLED_CHANNELS: "dingtalk,console"
+  NODE_ENV: "production"
+  PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: "/usr/bin/chromium"
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+  QWENPAW_RUNNING_IN_CONTAINER: "1"
+  PIP_INDEX_URL: "http://afty.bocomm.tst/repo/api/pypi/pypi-public/simple"
+  PIP_TRUSTED_HOST: "afty.bocomm.tst"
+  NPM_CONFIG_REGISTRY: "http://182.119.92.54:8081/repository/npm-public/"
+  WORKSPACE_DIR: "/app"
+  QWENPAW_WORKING_DIR: "/app/working"
+  QWENPAW_SECRET_DIR: "/app/working.secret"
+  QWENPAW_CONFIG_FILE: "config.json"
+  QWENPAW_AUTH_ENABLED: "true"
+  QWENPAW_AUTH_USERNAME: "admin"
+  QWENPAW_AUTH_PASSWORD: "admin123"
 
 ---
 # =========================
@@ -150,7 +166,7 @@ spec:
       serviceAccountName: qwenpaw-controller
       containers:
         - name: controller
-          image: qwenpaw-controller-java:0.1.8
+          image: qwenpaw-controller-java:0.1.11
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

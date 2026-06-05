@@ -380,7 +380,7 @@
 
     <div class="container">
         <div class="toolbar">
-            <input type="text" id="newUserId" placeholder="输入 User ID 创建 Pod">
+            <input type="text" id="newUserId" placeholder="输入 User ID（不含 _）创建 Pod">
             <button class="btn btn-success" onclick="createPod()">
                 <span>+</span> 创建 Pod
             </button>
@@ -391,10 +391,10 @@
                 <span>&#x21c4;</span> 同步
             </button>
             <button class="btn btn-primary" onclick="showConfigModal()">
-                <span>&#9881;</span> 配置管理
+                <span>&#9881;</span> 管理台 配置中心
             </button>
             <button class="btn btn-primary" onclick="showRuntimeConfigModal()">
-                <span>&#9881;</span> 配置中心
+                <span>&#9881;</span> QwenPaw 配置中心
             </button>
         </div>
 
@@ -449,13 +449,20 @@
     <div class="modal-overlay" id="configModal">
         <div class="modal" style="max-width: 900px;">
             <div class="modal-header">
-                <h3>Controller 配置管理</h3>
+                <h3>管理台配置</h3>
                 <button class="modal-close" onclick="closeModal('configModal')">&times;</button>
             </div>
             <div class="modal-body">
+                <div class="runtime-config-meta" id="configMeta"></div>
+                <div class="runtime-config-header">
+                    <div>配置名</div>
+                    <div>配置值</div>
+                    <div></div>
+                </div>
                 <div id="configContent">
                     <p>加载中...</p>
                 </div>
+                <button class="btn btn-default" onclick="addConfigRow()">添加配置</button>
             </div>
             <div class="modal-footer">
                 <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #666; margin-right: auto;">
@@ -472,7 +479,7 @@
     <div class="modal-overlay" id="runtimeConfigModal">
         <div class="modal" style="max-width: 760px;">
             <div class="modal-header">
-                <h3>QwenPaw 配置中心</h3>
+                <h3>QwenPaw Pod 环境变量</h3>
                 <button class="modal-close" onclick="closeModal('runtimeConfigModal')">&times;</button>
             </div>
             <div class="modal-body">
@@ -679,6 +686,10 @@
                 showToast('请输入 User ID', 'error');
                 return;
             }
+            if (userId.includes('_')) {
+                showToast('User ID 不允许包含 _', 'error');
+                return;
+            }
             showLoading(true);
             try {
                 await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/pod`, {
@@ -810,6 +821,21 @@
         });
 
         // 在用户 ID 输入框按回车时创建 Pod。
+        document.getElementById('newUserId').addEventListener('keydown', (e) => {
+            if (e.key === '_') {
+                e.preventDefault();
+                showToast('User ID 不允许包含 _', 'error');
+            }
+        });
+
+        document.getElementById('newUserId').addEventListener('input', (e) => {
+            if (!e.target.value.includes('_')) {
+                return;
+            }
+            e.target.value = e.target.value.replace(/_/g, '');
+            showToast('User ID 不允许包含 _', 'error');
+        });
+
         document.getElementById('newUserId').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') createPod();
         });
@@ -826,31 +852,52 @@
         // 加载控制器自身配置 ConfigMap。
         async function loadConfig() {
             const content = document.getElementById('configContent');
+            const meta = document.getElementById('configMeta');
             content.innerHTML = '<p>加载中...</p>';
+            meta.textContent = '';
             try {
                 const data = await apiRequest(`${API_BASE}/admin/config`);
                 currentConfigData = data.data || {};
+                meta.textContent = `${data.namespace || '-'} / ${data.name || '-'}`;
                 renderConfigEditor(currentConfigData);
             } catch (error) {
                 content.innerHTML = `<p style="color: #cf1322;">加载配置失败: ${error.message}</p>`;
             }
         }
 
-        // 把控制器 ConfigMap data 渲染成可编辑表单。
+        // 把控制器 ConfigMap data 渲染成可增删的键值行。
         function renderConfigEditor(data) {
             const content = document.getElementById('configContent');
-            if (!data || Object.keys(data).length === 0) {
-                content.innerHTML = '<p>暂无配置数据</p>';
+            const entries = Object.entries(data || {});
+            if (entries.length === 0) {
+                content.innerHTML = '';
+                addConfigRow();
                 return;
             }
-            // items 是每个配置项输入行的 HTML。
-            const items = Object.entries(data).map(([key, value]) => `
-                <div class="config-item">
-                    <label>${escapeHtml(key)}</label>
-                    <input type="text" data-key="${escapeHtml(key)}" value="${escapeHtml(value)}" />
+            content.innerHTML = entries.map(([key, value]) => configRowHtml(key, value)).join('');
+        }
+
+        // 生成一行控制器配置编辑 HTML。
+        function configRowHtml(key = '', value = '') {
+            return `
+                <div class="runtime-config-row config-row">
+                    <input type="text" data-role="config-key" value="${escapeHtml(key)}" placeholder="SERVER_PORT" />
+                    <input type="text" data-role="config-value" value="${escapeHtml(value)}" placeholder="8080" />
+                    <button class="btn btn-danger" onclick="removeConfigRow(this)">删除</button>
                 </div>
-            `).join('');
-            content.innerHTML = `<div class="config-grid">${items}</div>`;
+            `;
+        }
+
+        // 新增一行控制器配置。
+        function addConfigRow(key = '', value = '') {
+            const content = document.getElementById('configContent');
+            if (content.querySelector('p')) content.innerHTML = '';
+            content.insertAdjacentHTML('beforeend', configRowHtml(key, value));
+        }
+
+        // 删除一行控制器配置。
+        function removeConfigRow(button) {
+            button.closest('.config-row').remove();
         }
 
         // 转义即将写入 innerHTML 的文本，避免配置值破坏页面结构。
@@ -865,12 +912,18 @@
 
         // 保存控制器 ConfigMap，并可选触发控制器 Deployment 滚动重启。
         async function saveConfig() {
-            const inputs = document.querySelectorAll('#configContent input[data-key]');
-            // newData 收集表单中的最新 ConfigMap data。
+            const rows = document.querySelectorAll('#configContent .config-row');
             const newData = {};
-            inputs.forEach(input => {
-                newData[input.dataset.key] = input.value;
+            rows.forEach(row => {
+                const key = row.querySelector('[data-role="config-key"]').value.trim();
+                const value = row.querySelector('[data-role="config-value"]').value;
+                if (key) newData[key] = value;
             });
+
+            if (Object.keys(newData).length === 0) {
+                showToast('请至少保留一个配置项', 'error');
+                return;
+            }
 
             // restart 表示保存后是否触发后端重启控制器 Deployment。
             const restart = document.getElementById('restartAfterUpdate').checked;
