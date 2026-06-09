@@ -117,6 +117,19 @@ public class UserPodController {
     }
 
     /**
+     * 重启指定用户 Pod 内的 QwenPaw 服务进程，不删除 Pod。
+     */
+    @PostMapping("/users/{userId}/service/restart")
+    public UserPodResponse restartUserService(@PathVariable String userId) {
+        String normalizedUserId = normalizeUserId(userId);
+        UserPodMapping mapping = podManager.restartUserService(normalizedUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User pod not found or service restart failed"));
+        UserPodResponse response = UserPodResponse.from(mapping);
+        response.setMessage("QwenPaw service restart triggered successfully");
+        return response;
+    }
+
+    /**
      * 列出控制器当前能发现的所有用户 Pod。
      */
     @GetMapping("/users/pods")

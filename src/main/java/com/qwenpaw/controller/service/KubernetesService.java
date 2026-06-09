@@ -28,10 +28,13 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DeploymentBuilder;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
+import io.fabric8.kubernetes.client.dsl.ExecWatch;
 import io.fabric8.kubernetes.client.dsl.base.ResourceDefinitionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -41,6 +44,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 封装所有直接访问 Kubernetes API 的操作。
@@ -74,11 +78,19 @@ public class KubernetesService {
     private final QwenPawProperties properties;
 
     /**
-     * 注入 Kubernetes 客户端和配置对象。
+     * 负责为用户创建个人 API Key 的服务。
      */
-    public KubernetesService(KubernetesClient client, QwenPawProperties properties) {
+    private final PersonalApiKeyService personalApiKeyService;
+
+    /**
+     * 注入 Kubernetes 客户端、配置对象和个人 API Key 服务。
+     */
+    public KubernetesService(KubernetesClient client,
+                             QwenPawProperties properties,
+                             PersonalApiKeyService personalApiKeyService) {
         this.client = client;
         this.properties = properties;
+        this.personalApiKeyService = personalApiKeyService;
     }
 
     /**
@@ -136,6 +148,8 @@ public class KubernetesService {
         List<VolumeMount> qwenpawVolumeMounts = qwenpawVolumeMounts(userId);
         // volumes 是 Pod 级别声明，容器通过 volumeMounts 引用这些卷。
         List<Volume> volumes = podVolumes();
+        // 只有真正新建 Deployment 时才创建个人 API Key，重启已有 Pod 不会再次调用外部接口。
+        String personalApiKey = personalApiKeyService.createPersonalApiKey(userId);
         Deployment deployment = new DeploymentBuilder()
                 .withApiVersion("apps/v1")
                 .withKind("Deployment")
@@ -159,6 +173,10 @@ public class KubernetesService {
                         .withImage("busybox:1.35")
                         // initContainer 先执行初始化命令，执行完成后主 qwenpaw 容器才会启动。
                         .withCommand("sh", "-c", initConfigCommand(userId))
+                        .withEnv(new EnvVarBuilder()
+                                .withName("PERSONAL_API_KEY")
+                                .withValue(personalApiKey)
+                                .build())
                         .withVolumeMounts(initVolumeMounts)
                         .build())
                 .addToContainers(new ContainerBuilder()
@@ -412,6 +430,46 @@ public class KubernetesService {
     }
 
     /**
+     * 在业务容器内停止 QwenPaw 应用进程，由容器内 supervisord 自动重新拉起。
+     */
+    public boolean restartQwenPawService(String podName) {
+        int port = properties.getQwenpawContainerPort();
+        ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        ExecWatch execWatch = null;
+        try {
+            execWatch = client.pods()
+                    .inNamespace(properties.getK8sNamespace())
+                    .withName(podName)
+                    .inContainer("qwenpaw")
+                    .writingOutput(stdout)
+                    .writingError(stderr)
+                    .exec("qwenpaw", "shutdown", "--port", String.valueOf(port));
+
+            Integer exitCode = execWatch.exitCode().get(20, TimeUnit.SECONDS);
+            if (exitCode != null && exitCode == 0) {
+                log.info("Triggered QwenPaw service restart in pod {} on port {}", podName, port);
+                return true;
+            }
+
+            log.warn("QwenPaw service restart command failed in pod {} with exit code {}, stdout={}, stderr={}",
+                    podName, exitCode, execOutput(stdout), execOutput(stderr));
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Interrupted while restarting QwenPaw service in pod {}", podName, e);
+            return false;
+        } catch (Exception e) {
+            log.warn("Failed to restart QwenPaw service in pod {}", podName, e);
+            return false;
+        } finally {
+            if (execWatch != null) {
+                execWatch.close();
+            }
+        }
+    }
+
+    /**
      * 读取指定 ConfigMap 的 data 字段。
      */
     public Map<String, String> getConfigMap(String configMapName) {
@@ -550,6 +608,14 @@ public class KubernetesService {
      */
     private String escapeRegex(String value) {
         return value.replaceAll("([\\\\.\\[\\]{}()*+?^$|])", "\\\\$1");
+    }
+
+    /**
+     * 把 exec 输出转成便于日志排查的短文本。
+     */
+    private String execOutput(ByteArrayOutputStream output) {
+        String text = output.toString(StandardCharsets.UTF_8).strip();
+        return text.length() <= 1000 ? text : text.substring(text.length() - 1000);
     }
 
     /**
@@ -759,10 +825,17 @@ public class KubernetesService {
         String workingDir = userWorkingDir(userId);
         String secretDir = userSecretDir(userId);
         String backupDir = userBackupDir(userId);
+        String personalApiKeyFile = secretDir + "/" + properties.getPersonalApiKeyFileRelativePath();
         // existingDataCheck 只要任意用户目录已有文件，就认为这是老用户数据并跳过模板复制。
         String existingDataCheck = "find " + shellQuote(workingDir) + " "
                 + shellQuote(secretDir) + " " + shellQuote(backupDir)
                 + " -mindepth 1 -print 2>/dev/null | head -n 1";
+        String fillPersonalApiKey = "if [ -n \"${PERSONAL_API_KEY:-}\" ] && [ -f "
+                + shellQuote(personalApiKeyFile) + " ]; then "
+                + "escaped_key=$(printf '%s' \"$PERSONAL_API_KEY\" | sed 's/\\\\/\\\\\\\\/g; s/[\\/&]/\\\\&/g; s/\"/\\\\\"/g') && "
+                + "sed -i \"s/\\\"api-key\\\"[[:space:]]*:[[:space:]]*\\\"\\\"/\\\"api-key\\\": \\\"${escaped_key}\\\"/\" "
+                + shellQuote(personalApiKeyFile) + "; "
+                + "fi";
         // initContainer 每次新 Pod 启动都会执行，但 cp 只在用户目录为空时发生。
         return "mkdir -p " + shellQuote(workingDir) + " " + shellQuote(secretDir) + " "
                 + shellQuote(backupDir) + " && "
@@ -772,7 +845,8 @@ public class KubernetesService {
                 + "cp -af " + shellQuote(templateDir + "/working/.") + " " + shellQuote(workingDir + "/") + " && "
                 + "cp -af " + shellQuote(templateDir + "/working.secret/.") + " " + shellQuote(secretDir + "/") + " && "
                 + "if [ -d " + shellQuote(templateDir + "/working.backups") + " ]; then cp -af "
-                + shellQuote(templateDir + "/working.backups/.") + " " + shellQuote(backupDir + "/") + "; fi; "
+                + shellQuote(templateDir + "/working.backups/.") + " " + shellQuote(backupDir + "/") + "; fi && "
+                + fillPersonalApiKey + "; "
                 + "fi";
     }
 

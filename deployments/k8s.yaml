@@ -139,6 +139,12 @@ data:
   QWENPAW_AUTH_ENABLED: "true"
   QWENPAW_AUTH_USERNAME: "admin"
   QWENPAW_AUTH_PASSWORD: "admin123"
+  PYTHONPATH: "/app/working/_user_python_libs_"
+  PIP_TARGET: "/app/working/_user_python_libs_"
+  LANGFUSE_SECRET_KEY: "sk-lf-2580b383-ac8a-4cd4-b42e-b2d6d2f74922"
+  LANGFUSE_PUBLIC_KEY: "pk-lf-0898469d-aac7-4be5-b98a-3bc184b8f144"
+  LANGFUSE_BASE_URL: "http://53.192.28.255:3000"
+  OTEL_ENABLED: "true"
 
 ---
 # =========================
@@ -166,7 +172,7 @@ spec:
       serviceAccountName: qwenpaw-controller
       containers:
         - name: controller
-          image: qwenpaw-controller-java:0.1.11
+          image: qwenpaw-controller-java:0.1.14
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

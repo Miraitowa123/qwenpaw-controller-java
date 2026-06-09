@@ -154,6 +154,26 @@ public class QwenPawProperties {
     private boolean startupSyncEnabled = false;
 
     /**
+     * 创建用户个人 API Key 的外部接口地址。
+     */
+    private String personalApiKeyUrl = "http://12.244.66.225/ELLM.ELLM-OMSERVICE.V-1.0/createPersonalApiKey.do";
+
+    /**
+     * 调用个人 API Key 接口时传递的 Jumpcloud-Env 请求头。
+     */
+    private String personalApiKeyJumpcloudEnv = "BASE";
+
+    /**
+     * 调用个人 API Key 接口的超时秒数。
+     */
+    private int personalApiKeyTimeoutSeconds = 20;
+
+    /**
+     * personal-api-key.json 在 working.secret 目录下的相对路径。
+     */
+    private String personalApiKeyFileRelativePath = "providers/custom/personal-api-key.json";
+
+    /**
      * 获取 Kubernetes 命名空间。
      */
     public String getK8sNamespace() {
@@ -557,5 +577,61 @@ public class QwenPawProperties {
      */
     public void setStartupSyncEnabled(boolean startupSyncEnabled) {
         this.startupSyncEnabled = startupSyncEnabled;
+    }
+
+    /**
+     * 获取创建用户个人 API Key 的外部接口地址。
+     */
+    public String getPersonalApiKeyUrl() {
+        return personalApiKeyUrl;
+    }
+
+    /**
+     * 设置创建用户个人 API Key 的外部接口地址。
+     */
+    public void setPersonalApiKeyUrl(String personalApiKeyUrl) {
+        this.personalApiKeyUrl = personalApiKeyUrl;
+    }
+
+    /**
+     * 获取调用个人 API Key 接口时使用的 Jumpcloud-Env 请求头。
+     */
+    public String getPersonalApiKeyJumpcloudEnv() {
+        return personalApiKeyJumpcloudEnv;
+    }
+
+    /**
+     * 设置调用个人 API Key 接口时使用的 Jumpcloud-Env 请求头。
+     */
+    public void setPersonalApiKeyJumpcloudEnv(String personalApiKeyJumpcloudEnv) {
+        this.personalApiKeyJumpcloudEnv = personalApiKeyJumpcloudEnv;
+    }
+
+    /**
+     * 获取调用个人 API Key 接口的超时秒数。
+     */
+    public int getPersonalApiKeyTimeoutSeconds() {
+        return personalApiKeyTimeoutSeconds;
+    }
+
+    /**
+     * 设置调用个人 API Key 接口的超时秒数。
+     */
+    public void setPersonalApiKeyTimeoutSeconds(int personalApiKeyTimeoutSeconds) {
+        this.personalApiKeyTimeoutSeconds = personalApiKeyTimeoutSeconds;
+    }
+
+    /**
+     * 获取 personal-api-key.json 在 working.secret 下的相对路径。
+     */
+    public String getPersonalApiKeyFileRelativePath() {
+        return personalApiKeyFileRelativePath;
+    }
+
+    /**
+     * 设置 personal-api-key.json 在 working.secret 下的相对路径。
+     */
+    public void setPersonalApiKeyFileRelativePath(String personalApiKeyFileRelativePath) {
+        this.personalApiKeyFileRelativePath = personalApiKeyFileRelativePath;
     }
 }

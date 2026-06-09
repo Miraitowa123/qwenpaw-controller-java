@@ -152,6 +152,28 @@ public class PodManager {
     }
 
     /**
+     * 重启指定用户 Pod 内的 QwenPaw 服务进程，不删除 Pod。
+     */
+    public Optional<UserPodMapping> restartUserService(String userId) {
+        Optional<UserPodMapping> mapping = findUserPod(userId);
+        if (mapping.isEmpty()) {
+            log.warn("User {} has no pod", userId);
+            return Optional.empty();
+        }
+        UserPodMapping pod = mapping.get();
+        if (pod.getStatus() != PodStatus.RUNNING) {
+            log.warn("User {} pod {} is not running, status={}", userId, pod.getPodName(), pod.getStatus());
+            return Optional.empty();
+        }
+        if (!kubernetesService.restartQwenPawService(pod.getPodName())) {
+            return Optional.empty();
+        }
+        pod.setUpdatedAt(now());
+        pod.setStatus(kubernetesService.getPodStatus(pod.getPodName()));
+        return Optional.of(pod);
+    }
+
+    /**
      * 扫描 Kubernetes 中已有 Pod 并输出同步日志；映射信息由当前 Pod 实时生成。
      */
     public void syncMappings() {

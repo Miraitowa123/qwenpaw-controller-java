@@ -130,11 +130,46 @@
         .status-restarting { background: #f9f0ff; color: #531dab; border: 1px solid #d3adf7; }
         .actions {
             display: flex;
-            gap: 8px;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: nowrap;
+            position: relative;
+            white-space: nowrap;
         }
         .actions .btn {
             padding: 4px 10px;
             font-size: 13px;
+        }
+        .action-menu {
+            position: relative;
+        }
+        .action-menu summary {
+            list-style: none;
+        }
+        .action-menu summary::-webkit-details-marker {
+            display: none;
+        }
+        .action-menu-panel {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: calc(100% + 6px);
+            min-width: 120px;
+            padding: 4px;
+            background: #fff;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            z-index: 20;
+        }
+        .action-menu[open] .action-menu-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .action-menu-panel .btn {
+            width: 100%;
+            justify-content: flex-start;
         }
         .modal-overlay {
             display: none;
@@ -391,7 +426,7 @@
                 <span>&#x21c4;</span> 同步
             </button>
             <button class="btn btn-primary" onclick="showConfigModal()">
-                <span>&#9881;</span> 管理台 配置中心
+                <span>&#9881;</span> Controller 配置中心
             </button>
             <button class="btn btn-primary" onclick="showRuntimeConfigModal()">
                 <span>&#9881;</span> QwenPaw 配置中心
@@ -653,8 +688,14 @@
                                 <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
                                 <button class="btn btn-default" onclick="showLogs('${userId}')">日志</button>
                                 <button class="btn btn-default" onclick="showTerminal('${userId}')">终端</button>
-                                <button class="btn btn-warning" onclick="restartPod('${userId}')">重启</button>
-                                <button class="btn btn-danger" onclick="deletePod('${userId}')">删除</button>
+                                <details class="action-menu">
+                                    <summary class="btn btn-default">更多</summary>
+                                    <div class="action-menu-panel">
+                                        <button class="btn btn-warning" onclick="restartService('${userId}')">重启服务</button>
+                                        <button class="btn btn-warning" onclick="restartPod('${userId}')">重启 Pod</button>
+                                        <button class="btn btn-danger" onclick="deletePod('${userId}')">删除</button>
+                                    </div>
+                                </details>
                             </div>
                         </td>
                     </tr>
@@ -697,6 +738,21 @@
                 });
                 showToast('Pod 创建成功');
                 document.getElementById('newUserId').value = '';
+                await loadPods();
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 调用后端只重启指定用户 Pod 内的 QwenPaw 服务进程。
+        async function restartService(userId) {
+            if (!confirm(`确定要重启用户 ${userId} 的 QwenPaw 服务吗？Pod 不会被删除。`)) return;
+            showLoading(true);
+            try {
+                await apiRequest(`${API_BASE}/users/${encodeURIComponent(userId)}/service/restart`, {
+                    method: 'POST'
+                });
+                showToast('QwenPaw 服务重启已触发');
                 await loadPods();
             } finally {
                 showLoading(false);
