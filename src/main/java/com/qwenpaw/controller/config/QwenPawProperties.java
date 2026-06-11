@@ -154,11 +154,6 @@ public class QwenPawProperties {
     private boolean startupSyncEnabled = false;
 
     /**
-     * 创建用户个人 API Key 的外部接口地址。
-     */
-    private String personalApiKeyUrl = "http://12.244.66.225/ELLM.ELLM-OMSERVICE.V-1.0/createPersonalApiKey.do";
-
-    /**
      * 调用个人 API Key 接口时传递的 Jumpcloud-Env 请求头。
      */
     private String personalApiKeyJumpcloudEnv = "BASE";
@@ -577,20 +572,6 @@ public class QwenPawProperties {
      */
     public void setStartupSyncEnabled(boolean startupSyncEnabled) {
         this.startupSyncEnabled = startupSyncEnabled;
-    }
-
-    /**
-     * 获取创建用户个人 API Key 的外部接口地址。
-     */
-    public String getPersonalApiKeyUrl() {
-        return personalApiKeyUrl;
-    }
-
-    /**
-     * 设置创建用户个人 API Key 的外部接口地址。
-     */
-    public void setPersonalApiKeyUrl(String personalApiKeyUrl) {
-        this.personalApiKeyUrl = personalApiKeyUrl;
     }
 
     /**

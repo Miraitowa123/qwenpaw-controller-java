@@ -83,14 +83,21 @@ public class KubernetesService {
     private final PersonalApiKeyService personalApiKeyService;
 
     /**
-     * 注入 Kubernetes 客户端、配置对象和个人 API Key 服务。
+     * 根据 RUN_ENV 解析 ELLM 端点的服务。
+     */
+    private final EllmEndpointResolver ellmEndpointResolver;
+
+    /**
+     * 注入 Kubernetes 客户端、配置对象、个人 API Key 服务和 ELLM 端点解析服务。
      */
     public KubernetesService(KubernetesClient client,
                              QwenPawProperties properties,
-                             PersonalApiKeyService personalApiKeyService) {
+                             PersonalApiKeyService personalApiKeyService,
+                             EllmEndpointResolver ellmEndpointResolver) {
         this.client = client;
         this.properties = properties;
         this.personalApiKeyService = personalApiKeyService;
+        this.ellmEndpointResolver = ellmEndpointResolver;
     }
 
     /**
@@ -148,8 +155,10 @@ public class KubernetesService {
         List<VolumeMount> qwenpawVolumeMounts = qwenpawVolumeMounts(userId);
         // volumes 是 Pod 级别声明，容器通过 volumeMounts 引用这些卷。
         List<Volume> volumes = podVolumes();
+        // ellmEndpoint 来自 qwenpaw-runtime-config 的 RUN_ENV，用于统一生成 OMSERVICE 和 ADAPTER 地址。
+        EllmEndpointResolver.EllmEndpoint ellmEndpoint = ellmEndpointResolver.resolve();
         // 只有真正新建 Deployment 时才创建个人 API Key，重启已有 Pod 不会再次调用外部接口。
-        String personalApiKey = personalApiKeyService.createPersonalApiKey(userId);
+        String personalApiKey = personalApiKeyService.createPersonalApiKey(userId, ellmEndpoint);
         Deployment deployment = new DeploymentBuilder()
                 .withApiVersion("apps/v1")
                 .withKind("Deployment")
@@ -173,10 +182,15 @@ public class KubernetesService {
                         .withImage("busybox:1.35")
                         // initContainer 先执行初始化命令，执行完成后主 qwenpaw 容器才会启动。
                         .withCommand("sh", "-c", initConfigCommand(userId))
-                        .withEnv(new EnvVarBuilder()
-                                .withName("PERSONAL_API_KEY")
-                                .withValue(personalApiKey)
-                                .build())
+                        .withEnv(
+                                new EnvVarBuilder()
+                                        .withName("PERSONAL_API_KEY")
+                                        .withValue(personalApiKey)
+                                        .build(),
+                                new EnvVarBuilder()
+                                        .withName("ELLM_ADAPTER_BASE_URL")
+                                        .withValue(ellmEndpoint.adapterBaseUrl())
+                                        .build())
                         .withVolumeMounts(initVolumeMounts)
                         .build())
                 .addToContainers(new ContainerBuilder()
@@ -830,11 +844,18 @@ public class KubernetesService {
         String existingDataCheck = "find " + shellQuote(workingDir) + " "
                 + shellQuote(secretDir) + " " + shellQuote(backupDir)
                 + " -mindepth 1 -print 2>/dev/null | head -n 1";
-        String fillPersonalApiKey = "if [ -n \"${PERSONAL_API_KEY:-}\" ] && [ -f "
+        String fillPersonalApiKey = "if [ -f "
                 + shellQuote(personalApiKeyFile) + " ]; then "
+                + "if [ -n \"${PERSONAL_API_KEY:-}\" ]; then "
                 + "escaped_key=$(printf '%s' \"$PERSONAL_API_KEY\" | sed 's/\\\\/\\\\\\\\/g; s/[\\/&]/\\\\&/g; s/\"/\\\\\"/g') && "
                 + "sed -i \"s/\\\"api-key\\\"[[:space:]]*:[[:space:]]*\\\"\\\"/\\\"api-key\\\": \\\"${escaped_key}\\\"/\" "
                 + shellQuote(personalApiKeyFile) + "; "
+                + "fi; "
+                + "if [ -n \"${ELLM_ADAPTER_BASE_URL:-}\" ]; then "
+                + "escaped_base_url=$(printf '%s' \"$ELLM_ADAPTER_BASE_URL\" | sed 's/\\\\/\\\\\\\\/g; s/[\\/&]/\\\\&/g; s/\"/\\\\\"/g') && "
+                + "sed -i \"s#\\\"base_url\\\"[[:space:]]*:[[:space:]]*\\\"[^\\\"]*\\\"#\\\"base_url\\\": \\\"${escaped_base_url}\\\"#\" "
+                + shellQuote(personalApiKeyFile) + "; "
+                + "fi; "
                 + "fi";
         // initContainer 每次新 Pod 启动都会执行，但 cp 只在用户目录为空时发生。
         return "mkdir -p " + shellQuote(workingDir) + " " + shellQuote(secretDir) + " "

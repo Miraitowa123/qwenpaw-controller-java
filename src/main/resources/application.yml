@@ -51,7 +51,6 @@ qwenpaw:
   controller-deployment-name: ${CONTROLLER_DEPLOYMENT_NAME:qwenpaw-controller}
   pod-ready-timeout: ${POD_READY_TIMEOUT:600}
   startup-sync-enabled: ${STARTUP_SYNC_ENABLED:false}
-  personal-api-key-url: ${PERSONAL_API_KEY_URL:http://12.244.66.225/ELLM.ELLM-OMSERVICE.V-1.0/createPersonalApiKey.do}
   personal-api-key-jumpcloud-env: ${PERSONAL_API_KEY_JUMPCLOUD_ENV:BASE}
   personal-api-key-timeout-seconds: ${PERSONAL_API_KEY_TIMEOUT_SECONDS:20}
   personal-api-key-file-relative-path: ${PERSONAL_API_KEY_FILE_RELATIVE_PATH:providers/custom/personal-api-key.json}

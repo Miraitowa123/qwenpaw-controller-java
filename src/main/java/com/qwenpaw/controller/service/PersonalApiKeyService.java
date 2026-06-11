@@ -70,12 +70,12 @@ public class PersonalApiKeyService {
     /**
      * 调用 createPersonalApiKey 接口，返回当前用户的个人 API Key。
      */
-    public String createPersonalApiKey(String userId) {
+    public String createPersonalApiKey(String userId, EllmEndpointResolver.EllmEndpoint ellmEndpoint) {
         try {
             String requestMessage = buildRequestMessage(userId);
             String requestBody = "REQ_MESSAGE=" + requestMessage;
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(properties.getPersonalApiKeyUrl()))
+                    .uri(URI.create(ellmEndpoint.createPersonalApiKeyUrl()))
                     .timeout(Duration.ofSeconds(properties.getPersonalApiKeyTimeoutSeconds()))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .header("Jumpcloud-Env", properties.getPersonalApiKeyJumpcloudEnv())
@@ -89,7 +89,7 @@ public class PersonalApiKeyService {
 
             String apiKey = extractApiKey(response.body())
                     .orElseThrow(() -> new IllegalStateException("createPersonalApiKey response does not contain api-key"));
-            log.info("Created personal API key for user {}", userId);
+            log.info("Created personal API key for user {} in {}", userId, ellmEndpoint.runEnv());
             return apiKey;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
