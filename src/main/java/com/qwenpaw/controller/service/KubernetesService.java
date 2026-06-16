@@ -444,7 +444,7 @@ public class KubernetesService {
     }
 
     /**
-     * 在业务容器内停止 QwenPaw 应用进程，由容器内 supervisord 自动重新拉起。
+     * 在业务容器内优雅重启 QwenPaw 应用进程。
      */
     public boolean restartQwenPawService(String podName) {
         int port = properties.getQwenpawContainerPort();
@@ -458,29 +458,74 @@ public class KubernetesService {
                     .inContainer("qwenpaw")
                     .writingOutput(stdout)
                     .writingError(stderr)
-                    .exec("qwenpaw", "shutdown", "--port", String.valueOf(port));
+                    .exec("sh", "-c", gracefulQwenPawServiceRestartCommand(port));
 
-            Integer exitCode = execWatch.exitCode().get(20, TimeUnit.SECONDS);
+            Integer exitCode = execWatch.exitCode().get(75, TimeUnit.SECONDS);
             if (exitCode != null && exitCode == 0) {
-                log.info("Triggered QwenPaw service restart in pod {} on port {}", podName, port);
+                log.info("Gracefully restarted QwenPaw service processes in pod {}", podName);
                 return true;
             }
 
-            log.warn("QwenPaw service restart command failed in pod {} with exit code {}, stdout={}, stderr={}",
+            log.warn("Graceful QwenPaw service restart command failed in pod {} with exit code {}, stdout={}, stderr={}",
                     podName, exitCode, execOutput(stdout), execOutput(stderr));
             return false;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            log.warn("Interrupted while restarting QwenPaw service in pod {}", podName, e);
+            log.warn("Interrupted while gracefully restarting QwenPaw service in pod {}", podName, e);
             return false;
         } catch (Exception e) {
-            log.warn("Failed to restart QwenPaw service in pod {}", podName, e);
+            log.warn("Failed to gracefully restart QwenPaw service in pod {}", podName, e);
             return false;
         } finally {
             if (execWatch != null) {
                 execWatch.close();
             }
         }
+    }
+
+    /**
+     * 生成容器内执行的优雅重启命令，避免直接调用 qwenpaw shutdown。
+     */
+    private String gracefulQwenPawServiceRestartCommand(int port) {
+        return "set -u; "
+                + "port=" + port + "; "
+                + "supervisor_conf=/etc/supervisor/conf.d/supervisord.conf; "
+                + "qwenpaw_pids() { "
+                + "ps -eo pid=,args= | awk -v port=\"$port\" '$0 ~ /[q]wenpaw app/ && ($0 ~ (\"--port \" port) || $0 ~ (\"--port=\" port)) {print $1}'; "
+                + "}; "
+                + "if command -v supervisorctl >/dev/null 2>&1 && [ -f \"$supervisor_conf\" ] "
+                + "&& supervisorctl -c \"$supervisor_conf\" status >/tmp/qwenpaw-supervisor-status 2>/tmp/qwenpaw-supervisor-error; then "
+                + "programs=$(awk '$2 == \"RUNNING\" && $1 ~ /qwenpaw|app/ {print $1}' /tmp/qwenpaw-supervisor-status); "
+                + "if [ -n \"$programs\" ]; then "
+                + "echo \"Gracefully stopping supervisor programs: $programs\"; "
+                + "for program in $programs; do echo \"Stopping $program\"; supervisorctl -c \"$supervisor_conf\" stop \"$program\" || exit 1; done; "
+                + "echo \"Starting supervisor programs: $programs\"; "
+                + "for program in $programs; do echo \"Starting $program\"; supervisorctl -c \"$supervisor_conf\" start \"$program\" || exit 1; done; "
+                + "exit 0; "
+                + "fi; "
+                + "fi; "
+                + "pids=$(qwenpaw_pids); "
+                + "if [ -z \"$pids\" ]; then "
+                + "pids=$(ps -eo pid=,args= | awk '$0 ~ /[q]wenpaw app/ {print $1}'); "
+                + "fi; "
+                + "if [ -z \"$pids\" ]; then echo 'No qwenpaw app process found' >&2; exit 1; fi; "
+                + "echo \"Gracefully terminating qwenpaw app pids: $pids\"; "
+                + "for pid in $pids; do echo \"Sending SIGTERM to $pid\"; kill -TERM \"$pid\" || exit 1; sleep 1; done; "
+                + "i=0; alive=\"$pids\"; "
+                + "while [ \"$i\" -lt 30 ]; do "
+                + "alive=''; "
+                + "for pid in $pids; do if kill -0 \"$pid\" 2>/dev/null; then alive=\"$alive $pid\"; fi; done; "
+                + "if [ -z \"$alive\" ]; then break; fi; "
+                + "sleep 1; i=$((i + 1)); "
+                + "done; "
+                + "if [ -n \"$alive\" ]; then echo \"QwenPaw app pids did not exit after SIGTERM:$alive\" >&2; exit 1; fi; "
+                + "i=0; "
+                + "while [ \"$i\" -lt 30 ]; do "
+                + "restarted_pids=$(qwenpaw_pids); "
+                + "if [ -n \"$restarted_pids\" ]; then echo \"QwenPaw app restarted with pids: $restarted_pids\"; exit 0; fi; "
+                + "sleep 1; i=$((i + 1)); "
+                + "done; "
+                + "echo 'QwenPaw app did not restart after graceful SIGTERM' >&2; exit 1";
     }
 
     /**
@@ -840,15 +885,21 @@ public class KubernetesService {
         String secretDir = userSecretDir(userId);
         String backupDir = userBackupDir(userId);
         String personalApiKeyFile = secretDir + "/" + properties.getPersonalApiKeyFileRelativePath();
+        String personalApiKeyTemplateFile = templateDir + "/working.secret/" + properties.getPersonalApiKeyFileRelativePath();
         // existingDataCheck 只要任意用户目录已有文件，就认为这是老用户数据并跳过模板复制。
         String existingDataCheck = "find " + shellQuote(workingDir) + " "
                 + shellQuote(secretDir) + " " + shellQuote(backupDir)
                 + " -mindepth 1 -print 2>/dev/null | head -n 1";
+        String ensurePersonalApiKeyFile = "if [ ! -f " + shellQuote(personalApiKeyFile)
+                + " ] && [ -f " + shellQuote(personalApiKeyTemplateFile) + " ]; then "
+                + "mkdir -p \"$(dirname " + shellQuote(personalApiKeyFile) + ")\" && "
+                + "cp -af " + shellQuote(personalApiKeyTemplateFile) + " " + shellQuote(personalApiKeyFile) + "; "
+                + "fi";
         String fillPersonalApiKey = "if [ -f "
                 + shellQuote(personalApiKeyFile) + " ]; then "
                 + "if [ -n \"${PERSONAL_API_KEY:-}\" ]; then "
                 + "escaped_key=$(printf '%s' \"$PERSONAL_API_KEY\" | sed 's/\\\\/\\\\\\\\/g; s/[\\/&]/\\\\&/g; s/\"/\\\\\"/g') && "
-                + "sed -i \"s/\\\"api-key\\\"[[:space:]]*:[[:space:]]*\\\"\\\"/\\\"api-key\\\": \\\"${escaped_key}\\\"/\" "
+                + "sed -i \"s/\\\"api-key\\\"[[:space:]]*:[[:space:]]*\\\"[^\\\"]*\\\"/\\\"api-key\\\": \\\"${escaped_key}\\\"/\" "
                 + shellQuote(personalApiKeyFile) + "; "
                 + "fi; "
                 + "if [ -n \"${ELLM_ADAPTER_BASE_URL:-}\" ]; then "
@@ -858,6 +909,7 @@ public class KubernetesService {
                 + "fi; "
                 + "fi";
         // initContainer 每次新 Pod 启动都会执行，但 cp 只在用户目录为空时发生。
+        // personal-api-key.json 每次新建 Deployment 并拿到新 key 后都要覆盖为最新值。
         return "mkdir -p " + shellQuote(workingDir) + " " + shellQuote(secretDir) + " "
                 + shellQuote(backupDir) + " && "
                 + "if [ -n \"$(" + existingDataCheck + ")\" ]; then "
@@ -866,9 +918,10 @@ public class KubernetesService {
                 + "cp -af " + shellQuote(templateDir + "/working/.") + " " + shellQuote(workingDir + "/") + " && "
                 + "cp -af " + shellQuote(templateDir + "/working.secret/.") + " " + shellQuote(secretDir + "/") + " && "
                 + "if [ -d " + shellQuote(templateDir + "/working.backups") + " ]; then cp -af "
-                + shellQuote(templateDir + "/working.backups/.") + " " + shellQuote(backupDir + "/") + "; fi && "
-                + fillPersonalApiKey + "; "
-                + "fi";
+                + shellQuote(templateDir + "/working.backups/.") + " " + shellQuote(backupDir + "/") + "; fi; "
+                + "fi && "
+                + ensurePersonalApiKeyFile + " && "
+                + fillPersonalApiKey;
     }
 
     /**

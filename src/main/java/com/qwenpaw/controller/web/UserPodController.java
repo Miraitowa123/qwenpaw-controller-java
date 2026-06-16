@@ -123,7 +123,7 @@ public class UserPodController {
     public UserPodResponse restartUserService(@PathVariable String userId) {
         String normalizedUserId = normalizeUserId(userId);
         UserPodMapping mapping = podManager.restartUserService(normalizedUserId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User pod not found or service restart failed"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "User pod not found or service restart failed"));
         UserPodResponse response = UserPodResponse.from(mapping);
         response.setMessage("QwenPaw service restart triggered successfully");
         return response;

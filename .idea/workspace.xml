@@ -8,10 +8,8 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,6 +57,9 @@
   <component name="KubernetesApiProvider">{
   &quot;isMigrated&quot;: true
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -80,7 +81,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
     "RunOnceActivity.git.unshallow": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.QwenPawControllerApplication.executor": "Run",
+    "Spring Boot.QwenPawControllerApplication.executor": "Debug",
     "git-widget-placeholder": "main",
     "last_opened_file_path": "/Users/roxy/Documents/06WorkSpace/qwenpaw-controller-java",
     "node.js.detected.package.eslint": "true",
@@ -220,5 +221,16 @@
     <MESSAGE value="1.更改configMap配置" />
     <MESSAGE value="1.更换模型服务adapter2、新增杀死qwenpaw进程" />
     <option name="LAST_COMMIT_MESSAGE" value="1.更换模型服务adapter2、新增杀死qwenpaw进程" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" type="java-line">
+          <url>file://$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyService.java</url>
+          <line>75</line>
+          <option name="timeStamp" value="28" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
