@@ -177,6 +177,7 @@ public class KubernetesService {
                 .withLabels(Map.of("app", properties.getQwenpawAppLabel(), "user", userId))
                 .endMetadata()
                 .withNewSpec()
+                .withEnableServiceLinks(false)
                 .addToInitContainers(new ContainerBuilder()
                         .withName("init-config")
                         .withImage("busybox:1.35")
@@ -207,7 +208,7 @@ public class KubernetesService {
                                 .withLimits(resourceMap(properties.getResourceLimitsCpu(), properties.getResourceLimitsMemory()))
                                 .build())
                         .withVolumeMounts(qwenpawVolumeMounts)
-                        .withEnv(qwenpawExplicitEnv(userId))
+                        .withEnv(qwenpawExplicitEnv(userId, personalApiKey))
                         // envFrom 会把运行时 ConfigMap 的所有 key 注入为环境变量。
                         .withEnvFrom(runtimeConfigEnvFrom())
                         .withNewLivenessProbe()
@@ -816,7 +817,7 @@ public class KubernetesService {
     /**
      * 只保留每个用户 Pod 独有、无法放进全局 ConfigMap 的变量。
      */
-    private List<EnvVar> qwenpawExplicitEnv(String userId) {
+    private List<EnvVar> qwenpawExplicitEnv(String userId, String personalApiKey) {
         List<EnvVar> env = new ArrayList<>();
         if (isSingleMountMode()) {
             env.add(new EnvVarBuilder().withName("QWENPAW_WORKING_DIR").withValue(userWorkingDir(userId)).build());
@@ -824,6 +825,7 @@ public class KubernetesService {
         }
         env.add(new EnvVarBuilder().withName("USER_ID").withValue(userId).build());
         env.add(new EnvVarBuilder().withName("QWENPAW_USER").withValue(userId).build());
+        env.add(new EnvVarBuilder().withName("PERSONAL_API_KEY").withValue(personalApiKey).build());
         return env;
     }
 

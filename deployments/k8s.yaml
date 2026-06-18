@@ -172,7 +172,7 @@ spec:
       serviceAccountName: qwenpaw-controller
       containers:
         - name: controller
-          image: qwenpaw-controller-java:0.1.15
+          image: qwenpaw-controller-java:0.1.19
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
