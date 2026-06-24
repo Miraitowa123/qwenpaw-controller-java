@@ -59,6 +59,11 @@ public class QwenPawProperties {
     private String qwenpawNasMountPath = "/qwenpaw_nas";
 
     /**
+     * controller Pod 中挂载 personalData 的路径，用于管理接口访问用户数据。
+     */
+    private String personalDataMountPath = "/qwenpaw_nas/personalData";
+
+    /**
      * 用户 QwenPaw 容器 CPU request。
      */
     private String resourceRequestsCpu = "500m";
@@ -306,6 +311,20 @@ public class QwenPawProperties {
      */
     public void setQwenpawNasMountPath(String qwenpawNasMountPath) {
         this.qwenpawNasMountPath = qwenpawNasMountPath;
+    }
+
+    /**
+     * 获取 controller Pod 中 personalData 的挂载路径。
+     */
+    public String getPersonalDataMountPath() {
+        return personalDataMountPath;
+    }
+
+    /**
+     * 设置 controller Pod 中 personalData 的挂载路径。
+     */
+    public void setPersonalDataMountPath(String personalDataMountPath) {
+        this.personalDataMountPath = personalDataMountPath;
     }
 
     /**

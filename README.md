@@ -32,12 +32,16 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | DELETE | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 删除用户 Pod |
 | GET | `/bocompawAdmin/api/v1/users/{user_id}/logs` | 获取用户 Pod 日志 |
 | GET | `/bocompawAdmin/api/v1/users/pods` | 列出所有用户 Pod |
+| GET | `/bocompawAdmin/api/v1/skills/{skill_name}/download` | 下载当前用户指定技能目录 zip |
 | POST | `/bocompawAdmin/api/v1/admin/sync` | 同步用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |
+| GET | `/bocompawAdmin/api/v1/admin/personal-api-keys` | 获取当前用户的 personal-api-key.json 和 api-key |
 | GET | `/bocompawAdmin/api/v1/admin/config` | 获取 Controller ConfigMap |
 | PUT | `/bocompawAdmin/api/v1/admin/config` | 更新 Controller ConfigMap |
 | GET | `/bocompawAdmin/api/v1/admin/runtime-config` | 获取 QwenPaw 运行时变量 ConfigMap |
 | PUT | `/bocompawAdmin/api/v1/admin/runtime-config` | 更新运行时变量并刷新所有 QwenPaw Pod |
+| WS | `/bocompawAdmin/api/v1/terminal?user_id={user_id}` | 打开指定用户 Pod 的终端 |
+| WS | `/bocompawAdmin/api/v1/terminal?target=controller` | 打开 controller Pod 的管理终端 |
 | GET | `/bocompawAdmin/health` | 健康检查 |
 | GET | `/bocompawAdmin/ready` | 就绪检查 |
 
@@ -120,6 +124,20 @@ kubectl apply -f deployments/k8s.yaml
 
 ```bash
 curl -X POST http://controller:8080/bocompawAdmin/api/v1/users/alice/pod
+```
+
+下载技能：
+
+```bash
+curl -O -J "http://controller:8080/bocompawAdmin/api/v1/skills/%E6%8A%80%E8%83%BD1/download" \
+  -H "Cookie: userid=alice"
+```
+
+查看当前用户 personal-api-key：
+
+```bash
+curl "http://controller:8080/bocompawAdmin/api/v1/admin/personal-api-keys" \
+  -H "Cookie: userid=alice"
 ```
 
 返回示例：

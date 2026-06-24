@@ -7,10 +7,10 @@
     <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加httproute：在headers中添加userid">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/TerminalWebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/TerminalWebSocketHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -213,7 +213,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781751306622</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="1、添加httproute：在headers中添加userid">
+      <option name="closed" value="true" />
+      <created>1782283035136</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1782283035137</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

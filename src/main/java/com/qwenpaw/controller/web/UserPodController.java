@@ -7,22 +7,36 @@ import com.qwenpaw.controller.model.UpdateConfigRequest;
 import com.qwenpaw.controller.model.UpdateConfigResponse;
 import com.qwenpaw.controller.model.UserPodMapping;
 import com.qwenpaw.controller.model.UserPodResponse;
+import com.qwenpaw.controller.model.UserPersonalApiKeyResponse;
 import com.qwenpaw.controller.service.KubernetesService;
+import com.qwenpaw.controller.service.PersonalApiKeyFileService;
 import com.qwenpaw.controller.service.PodManager;
+import com.qwenpaw.controller.service.SkillDownloadService;
+import com.qwenpaw.controller.service.SkillDownloadService.SkillArchive;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.NoSuchFileException;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +66,16 @@ public class UserPodController {
     private final KubernetesService kubernetesService;
 
     /**
+     * 用户技能下载服务。
+     */
+    private final SkillDownloadService skillDownloadService;
+
+    /**
+     * 用户 personal-api-key.json 读取服务。
+     */
+    private final PersonalApiKeyFileService personalApiKeyFileService;
+
+    /**
      * qwenpaw.* 配置项。
      */
     private final QwenPawProperties properties;
@@ -59,9 +83,15 @@ public class UserPodController {
     /**
      * 注入 Pod 编排、Kubernetes 操作和配置对象。
      */
-    public UserPodController(PodManager podManager, KubernetesService kubernetesService, QwenPawProperties properties) {
+    public UserPodController(PodManager podManager,
+                             KubernetesService kubernetesService,
+                             SkillDownloadService skillDownloadService,
+                             PersonalApiKeyFileService personalApiKeyFileService,
+                             QwenPawProperties properties) {
         this.podManager = podManager;
         this.kubernetesService = kubernetesService;
+        this.skillDownloadService = skillDownloadService;
+        this.personalApiKeyFileService = personalApiKeyFileService;
         this.properties = properties;
     }
 
@@ -157,6 +187,32 @@ public class UserPodController {
     }
 
     /**
+     * 下载当前用户工作区中的指定技能目录 zip。
+     */
+    @GetMapping("/skills/{skillName}/download")
+    public ResponseEntity<StreamingResponseBody> downloadSkill(@PathVariable String skillName,
+                                                               @CookieValue(value = "userid", required = false) String cookieUserId,
+                                                               @RequestHeader(value = "x-user-id", required = false) String xUserId) {
+        String userId = resolveRequestUserId(cookieUserId, xUserId);
+        SkillArchive archive;
+        try {
+            archive = skillDownloadService.locateSkill(userId, skillName);
+        } catch (NoSuchFileException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Skill not found");
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to locate skill", e);
+        }
+
+        StreamingResponseBody body = outputStream -> skillDownloadService.writeZip(archive, outputStream);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition(skillName + ".zip"))
+                .body(body);
+    }
+
+    /**
      * 手动扫描 Kubernetes 中已有用户 Pod，并输出同步日志。
      */
     @PostMapping("/admin/sync")
@@ -172,6 +228,24 @@ public class UserPodController {
     public Map<String, Object> cleanupOrphaned() {
         podManager.cleanupOrphanedResources();
         return Map.of("message", "Orphaned resources cleaned up successfully", "time", OffsetDateTime.now());
+    }
+
+    /**
+     * 读取当前用户的 personal-api-key.json 原始内容和 custom_headers.api-key。
+     */
+    @GetMapping("/admin/personal-api-keys")
+    public UserPersonalApiKeyResponse getPersonalApiKey(@CookieValue(value = "userid", required = false) String cookieUserId,
+                                                       @RequestHeader(value = "x-user-id", required = false) String xUserId) {
+        String userId = resolveRequestUserId(cookieUserId, xUserId);
+        try {
+            return personalApiKeyFileService.readPersonalApiKey(userId);
+        } catch (NoSuchFileException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "personal-api-key.json not found", e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read personal-api-key files", e);
+        }
     }
 
     /**
@@ -261,5 +335,39 @@ public class UserPodController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "user_id is required");
         }
         return userId.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Cookie 优先；Cookie 不存在时使用 Header，避免同一请求里两个用户 ID 不一致。
+     */
+    private String resolveRequestUserId(String cookieUserId, String xUserId) {
+        String cookieValue = normalizeOptionalUserId(cookieUserId);
+        String headerValue = normalizeOptionalUserId(xUserId);
+        if (cookieValue != null && headerValue != null && !cookieValue.equals(headerValue)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userid cookie and header mismatch");
+        }
+        String resolvedUserId = cookieValue != null ? cookieValue : headerValue;
+        if (resolvedUserId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userid cookie or header is required");
+        }
+        return resolvedUserId;
+    }
+
+    /**
+     * 规范化可选用户 ID，空值返回 null。
+     */
+    private String normalizeOptionalUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return null;
+        }
+        return userId.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 生成兼容中文文件名的下载响应头。
+     */
+    private String contentDisposition(String fileName) {
+        String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename=\"skill.zip\"; filename*=UTF-8''" + encoded;
     }
 }
