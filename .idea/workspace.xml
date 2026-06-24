@@ -4,11 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、优雅杀死qwenpaw2、每次新创建pod，会获取新的个人apikey，然后要复写掉provider的配置">
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加httproute：在headers中添加userid">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/TerminalWebSocketHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/TerminalWebSocketHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -203,7 +205,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781572087048</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="1、每次新创建pod，会获取新的个人apikey，然后以env的方式注入到pod中">
+      <option name="closed" value="true" />
+      <created>1781751306622</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1781751306622</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -228,7 +238,9 @@
     <MESSAGE value="1.更改configMap配置" />
     <MESSAGE value="1.更换模型服务adapter2、新增杀死qwenpaw进程" />
     <MESSAGE value="1、优雅杀死qwenpaw2、每次新创建pod，会获取新的个人apikey，然后要复写掉provider的配置" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、优雅杀死qwenpaw2、每次新创建pod，会获取新的个人apikey，然后要复写掉provider的配置" />
+    <MESSAGE value="1、每次新创建pod，会获取新的个人apikey，然后以env的方式注入到pod中" />
+    <MESSAGE value="1、添加httproute：在headers中添加userid" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、添加httproute：在headers中添加userid" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

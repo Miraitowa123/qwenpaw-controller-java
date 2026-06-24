@@ -172,8 +172,11 @@ spec:
       serviceAccountName: qwenpaw-controller
       containers:
         - name: controller
-          image: qwenpaw-controller-java:0.1.19
+          image: qwenpaw-controller-java:0.1.20
           imagePullPolicy: IfNotPresent
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
           ports:
             - containerPort: 8080
               name: http
@@ -187,14 +190,24 @@ spec:
           envFrom:
             - configMapRef:
                 name: qwenpaw-controller-config
+          volumeMounts:
+            - name: qwenpaw-personal-data
+              mountPath: /qwenpaw_nas/personalData
           livenessProbe:
             httpGet:
               path: /bocompawAdmin/health
               port: 8080
-            initialDelaySeconds: 10
+            initialDelaySeconds: 60
             periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
+          startupProbe:
+            httpGet:
+              path: /bocompawAdmin/health
+              port: 8080
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /bocompawAdmin/ready
@@ -203,6 +216,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 3
             failureThreshold: 2
+      volumes:
+        - name: qwenpaw-personal-data
+          persistentVolumeClaim:
+            claimName: qwenpaw-nas-pvc
 ---
 # =========================
 # 8. Service

@@ -425,6 +425,9 @@
             <button class="btn btn-default" onclick="syncPods()">
                 <span>&#x21c4;</span> 同步
             </button>
+            <button class="btn btn-default" onclick="showControllerTerminal()">
+                <span>&#x2328;</span> 管理终端
+            </button>
             <button class="btn btn-primary" onclick="showConfigModal()">
                 <span>&#9881;</span> Controller 配置中心
             </button>
@@ -1101,6 +1104,21 @@
             loadRuntimeConfig();
         }
 
+        // 打开 qwenpaw-controller Pod 的管理终端。
+        function showControllerTerminal() {
+            terminalUserId = null;
+            document.getElementById('terminalModalTitle').textContent = '管理终端 - qwenpaw-controller';
+            resetTerminal();
+            setTerminalStatus('连接中...');
+            openModal('terminalModal');
+            connectTerminalUrl('target=controller');
+            setTimeout(() => {
+                fitTerminal();
+                sendTerminalResize();
+                focusTerminal();
+            }, 80);
+        }
+
         // 打开指定用户的 Pod 终端弹窗。
         function showTerminal(userId) {
             terminalUserId = userId;
@@ -1108,7 +1126,7 @@
             resetTerminal();
             setTerminalStatus('连接中...');
             openModal('terminalModal');
-            connectTerminal(userId);
+            connectTerminalUrl(`user_id=${encodeURIComponent(userId)}`);
             setTimeout(() => {
                 fitTerminal();
                 sendTerminalResize();
@@ -1117,12 +1135,12 @@
         }
 
         // 建立浏览器到后端终端接口的 WebSocket 连接。
-        function connectTerminal(userId) {
+        function connectTerminalUrl(queryString) {
             closeTerminalSocket();
             // protocol 根据当前页面协议选择 ws 或 wss。
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            // wsUrl 带 user_id，后端据此找到对应用户 Pod。
-            const wsUrl = `${protocol}//${window.location.host}${API_BASE}/terminal?user_id=${encodeURIComponent(userId)}`;
+            // wsUrl 带目标参数，后端据此找到对应 Pod。
+            const wsUrl = `${protocol}//${window.location.host}${API_BASE}/terminal?${queryString}`;
             terminalSocket = new WebSocket(wsUrl);
 
             terminalSocket.onopen = () => {

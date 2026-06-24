@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.qwenpaw.controller.config.QwenPawProperties;
 import com.qwenpaw.controller.service.KubernetesService;
+import io.fabric8.kubernetes.api.model.LabelSelector;
 import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.kubernetes.client.dsl.ExecListener;
@@ -42,7 +44,17 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
     /**
      * 打开交互式终端时进入的业务容器名称。
      */
-    private static final String CONTAINER_NAME = "qwenpaw";
+    private static final String QWENPAW_CONTAINER_NAME = "qwenpaw";
+
+    /**
+     * 管理终端连接的控制器容器名称。
+     */
+    private static final String CONTROLLER_CONTAINER_NAME = "controller";
+
+    /**
+     * 前端请求连接控制器 Pod 时使用的固定目标值。
+     */
+    private static final String CONTROLLER_TARGET = "controller";
 
     /**
      * 用于发起 Kubernetes exec 会话的客户端。
@@ -87,6 +99,12 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        String target = queryParam(session.getUri(), "target");
+        if (CONTROLLER_TARGET.equals(target)) {
+            openControllerTerminal(session);
+            return;
+        }
+
         String userId = normalizeUserId(queryParam(session.getUri(), "user_id"));
         if (userId == null) {
             closeWithMessage(session, "缺少 user_id 参数\r\n", CloseStatus.BAD_DATA);
@@ -101,6 +119,34 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         }
 
         String podName = pod.get().getMetadata().getName();
+        openPodTerminal(session, podName, QWENPAW_CONTAINER_NAME, new String[]{"/bin/bash"},
+                "Connected to " + podName + " / " + QWENPAW_CONTAINER_NAME + "\r\n");
+    }
+
+    /**
+     * 打开控制器 Pod 的管理终端。
+     */
+    private void openControllerTerminal(WebSocketSession session) {
+        Optional<Pod> pod = findRunningControllerPod();
+        if (pod.isEmpty()) {
+            closeWithMessage(session, "没有找到 Running 状态的 controller Pod\r\n", CloseStatus.NOT_ACCEPTABLE);
+            return;
+        }
+
+        String podName = pod.get().getMetadata().getName();
+        openPodTerminal(session, podName, CONTROLLER_CONTAINER_NAME,
+                new String[]{"sh", "-c", "cd /qwenpaw_nas/personalData 2>/dev/null || cd /app; export TERM=xterm-256color; if command -v bash >/dev/null 2>&1; then exec bash -i; fi; exec sh -i"},
+                "Connected to " + podName + " / " + CONTROLLER_CONTAINER_NAME + "\r\n");
+    }
+
+    /**
+     * 对指定 Pod 容器打开 Kubernetes exec 交互终端。
+     */
+    private void openPodTerminal(WebSocketSession session,
+                                 String podName,
+                                 String containerName,
+                                 String[] command,
+                                 String connectedMessage) {
         // output 把 Pod exec 输出流写回浏览器 WebSocket。
         WebSocketOutputStream output = new WebSocketOutputStream(session);
         ExecWatch execWatch;
@@ -109,21 +155,21 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
             execWatch = client.pods()
                     .inNamespace(properties.getK8sNamespace())
                     .withName(podName)
-                    .inContainer(CONTAINER_NAME)
+                    .inContainer(containerName)
                     .redirectingInput()
                     .writingOutput(output)
                     .writingError(output)
                     .withTTY()
                     .usingListener(new TerminalExecListener(session))
-                    .exec("/bin/bash");
+                    .exec(command);
         } catch (KubernetesClientException e) {
-            log.warn("Failed to open terminal for user {} pod {}", userId, podName, e);
+            log.warn("Failed to open terminal for pod {} container {}", podName, containerName, e);
             closeWithMessage(session, "打开终端失败: " + e.getMessage() + "\r\n", CloseStatus.SERVER_ERROR);
             return;
         }
 
         sessions.put(session.getId(), new TerminalSession(execWatch));
-        sendText(session, "Connected to " + podName + " / " + CONTAINER_NAME + "\r\n");
+        sendText(session, connectedMessage);
     }
 
     /**
@@ -212,6 +258,36 @@ public class TerminalWebSocketHandler extends TextWebSocketHandler {
         List<Pod> pods = kubernetesService.listPodsByLabel(Map.of(
                 "app", properties.getQwenpawAppLabel(),
                 "user", userId));
+        return pods.stream()
+                .filter(pod -> pod.getStatus() != null)
+                .filter(pod -> "Running".equals(pod.getStatus().getPhase()))
+                .findFirst();
+    }
+
+    /**
+     * 根据控制器 Deployment selector 查找当前 Running 状态的 controller Pod。
+     */
+    private Optional<Pod> findRunningControllerPod() {
+        Deployment deployment = client.apps()
+                .deployments()
+                .inNamespace(properties.getK8sNamespace())
+                .withName(properties.getControllerDeploymentName())
+                .get();
+        if (deployment == null || deployment.getSpec() == null || deployment.getSpec().getSelector() == null) {
+            return Optional.empty();
+        }
+
+        LabelSelector selector = deployment.getSpec().getSelector();
+        Map<String, String> matchLabels = selector.getMatchLabels();
+        if (matchLabels == null || matchLabels.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<Pod> pods = client.pods()
+                .inNamespace(properties.getK8sNamespace())
+                .withLabels(matchLabels)
+                .list()
+                .getItems();
         return pods.stream()
                 .filter(pod -> pod.getStatus() != null)
                 .filter(pod -> "Running".equals(pod.getStatus().getPhase()))

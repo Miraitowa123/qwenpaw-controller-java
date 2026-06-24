@@ -311,7 +311,7 @@ public class KubernetesService {
     }
 
     /**
-     * 创建 HTTPRoute，把带有 userid Cookie 的请求转发到对应用户 Service。
+     * 创建 HTTPRoute，把带有 userid Cookie 或 userid Header 的请求转发到对应用户 Service。
      */
     public String createHttpRoute(String userId) {
         String routeName = resourceName(userId);
@@ -320,16 +320,24 @@ public class KubernetesService {
             return routeName;
         }
 
+        // matches 之间是 OR 关系：优先兼容 Cookie 分流，也允许调用方用 userid 请求头兜底。
+        List<Map<String, Object>> matches = List.of(
+                Map.of("headers", List.of(Map.of(
+                        "name", "Cookie",
+                        "type", "RegularExpression",
+                        "value", "(?:^|;\\s*)userid=" + escapeRegex(userId) + "(?:$|;)"))),
+                Map.of("headers", List.of(Map.of(
+                        "name", "x-user-id",
+                        "type", "Exact",
+                        "value", userId))));
+
         // Gateway API 资源这里用通用 Map 构造，便于 Fabric8 操作 CRD。
         Map<String, Object> spec = Map.of(
                 "parentRefs", List.of(Map.of(
                         "name", properties.getGatewayName(),
                         "namespace", properties.getGatewayNamespace())),
                 "rules", List.of(Map.of(
-                        "matches", List.of(Map.of("headers", List.of(Map.of(
-                                "name", "Cookie",
-                                "type", "RegularExpression",
-                                "value", "(?:^|;\\s*)userid=" + escapeRegex(userId) + "(?:$|;)")))),
+                        "matches", matches,
                         "backendRefs", List.of(Map.of(
                                 "name", routeName,
                                 "port", properties.getQwenpawContainerPort(),
