@@ -125,7 +125,12 @@ public class PersonalApiKeyFileService {
             throw new NoSuchFileException(personalDataRoot.toString());
         }
 
-        Path userDir = personalDataRoot.resolve(userId).normalize();
+        Path userSegment = Path.of(userId.trim()).normalize();
+        if (userSegment.isAbsolute() || userSegment.getNameCount() != 1 || ".".equals(userSegment.toString()) || "..".equals(userSegment.toString())) {
+            throw new IllegalArgumentException("invalid userId");
+        }
+
+        Path userDir = personalDataRoot.resolve(userSegment).normalize();
         if (!userDir.startsWith(personalDataRoot)) {
             throw new IllegalArgumentException("userId escapes personalData directory");
         }

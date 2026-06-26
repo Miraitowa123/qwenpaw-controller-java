@@ -404,6 +404,152 @@
         .terminal-status.error {
             color: #cf1322;
         }
+        .sync-modal {
+            max-width: 1180px;
+        }
+        .sync-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+            gap: 16px;
+        }
+        .sync-panel {
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            background: #fafafa;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 420px;
+        }
+        .sync-panel-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+        .sync-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .sync-tree,
+        .sync-user-list {
+            overflow: auto;
+            max-height: 55vh;
+            padding-right: 4px;
+        }
+        .sync-node {
+            margin: 4px 0;
+        }
+        .sync-node-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .sync-node-toggle {
+            width: 22px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            padding: 0;
+            flex: 0 0 auto;
+            line-height: 22px;
+            font-size: 14px;
+        }
+        .sync-node-toggle:hover {
+            color: #1890ff;
+        }
+        .sync-node-toggle-placeholder {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            flex: 0 0 auto;
+        }
+        .sync-node-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            min-width: 0;
+            flex: 1;
+        }
+        .sync-node-kind {
+            flex: 0 0 auto;
+            font-size: 12px;
+            color: #1890ff;
+            background: #e6f7ff;
+            border: 1px solid #91d5ff;
+            border-radius: 10px;
+            padding: 0 6px;
+        }
+        .sync-node-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .sync-node-path {
+            color: #888;
+            font-size: 12px;
+            word-break: break-all;
+            margin-left: auto;
+            text-align: right;
+        }
+        .sync-node-children {
+            margin-left: 18px;
+            padding-left: 10px;
+            border-left: 1px solid #f0f0f0;
+        }
+        .sync-user-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .sync-user-item input {
+            flex: 0 0 auto;
+        }
+        .sync-meta {
+            color: #666;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        .sync-result {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+            border: 1px solid #e8e8e8;
+            white-space: pre-wrap;
+        }
+        .sync-result.success {
+            border-color: #b7eb8f;
+            background: #f6ffed;
+        }
+        .sync-result.error {
+            border-color: #ffccc7;
+            background: #fff2f0;
+        }
+        .sync-empty {
+            color: #999;
+            font-size: 13px;
+            padding: 12px 4px;
+        }
+        @media (max-width: 960px) {
+            .sync-grid {
+                grid-template-columns: 1fr;
+            }
+            .sync-panel {
+                min-height: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -424,6 +570,9 @@
             </button>
             <button class="btn btn-default" onclick="syncPods()">
                 <span>&#x21c4;</span> 同步
+            </button>
+            <button class="btn btn-default" onclick="showTemplateSyncModal()">
+                <span>&#x21c4;</span> 模板同步
             </button>
             <button class="btn btn-default" onclick="showControllerTerminal()">
                 <span>&#x2328;</span> 管理终端
@@ -535,6 +684,52 @@
             <div class="modal-footer">
                 <button class="btn btn-default" onclick="loadRuntimeConfig()">刷新</button>
                 <button class="btn btn-primary" onclick="saveRuntimeConfig()">保存并刷新所有 QwenPaw Pod</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模板同步弹窗 -->
+    <div class="modal-overlay" id="templateSyncModal">
+        <div class="modal sync-modal">
+            <div class="modal-header">
+                <h3>模板同步</h3>
+                <button class="modal-close" onclick="closeModal('templateSyncModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="sync-meta" id="templateSyncMeta"></div>
+                <div class="sync-grid">
+                    <div class="sync-panel">
+                        <div class="sync-panel-title">模板文件</div>
+                        <div class="sync-toolbar">
+                            <button class="btn btn-default" onclick="setTemplateTreeExpanded(true)">全部展开</button>
+                            <button class="btn btn-default" onclick="setTemplateTreeExpanded(false)">全部收起</button>
+                            <button class="btn btn-default" onclick="toggleTemplateSelection(true)">全选</button>
+                            <button class="btn btn-default" onclick="toggleTemplateSelection(false)">全不选</button>
+                        </div>
+                        <div class="sync-tree" id="templateSyncTree">
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                    <div class="sync-panel">
+                        <div class="sync-panel-title">目标用户</div>
+                        <div class="sync-toolbar">
+                            <button class="btn btn-default" onclick="toggleUserSelection(true)">全选</button>
+                            <button class="btn btn-default" onclick="toggleUserSelection(false)">全不选</button>
+                        </div>
+                        <div class="sync-user-list" id="templateSyncUsers">
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="sync-result" id="templateSyncResult" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #666; margin-right: auto;">
+                    <input type="checkbox" id="templateSyncOverwrite" checked>
+                    覆盖同名文件
+                </label>
+                <button class="btn btn-default" onclick="loadTemplateSync()">刷新</button>
+                <button class="btn btn-primary" onclick="runTemplateSync()">一键同步</button>
             </div>
         </div>
     </div>
@@ -854,6 +1049,194 @@
             }
         }
 
+        // 打开模板同步弹窗并加载模板树和用户列表。
+        function showTemplateSyncModal() {
+            openModal('templateSyncModal');
+            loadTemplateSync();
+        }
+
+        // 加载模板树和可同步用户列表。
+        async function loadTemplateSync() {
+            const tree = document.getElementById('templateSyncTree');
+            const users = document.getElementById('templateSyncUsers');
+            const meta = document.getElementById('templateSyncMeta');
+            const result = document.getElementById('templateSyncResult');
+            tree.innerHTML = '<p>加载中...</p>';
+            users.innerHTML = '<p>加载中...</p>';
+            meta.textContent = '';
+            hideTemplateSyncResult();
+            showLoading(true);
+            try {
+                const data = await apiRequest(`${API_BASE}/admin/template-sync`);
+                currentTemplateSyncOverview = data;
+                const templateTree = data.template_tree || [];
+                const userList = data.users || [];
+                meta.textContent = `模板根目录：${data.template_root || '-'}；模板节点：${countTemplateNodes(templateTree)}；可选用户：${userList.length}`;
+                tree.innerHTML = templateTree.length ? renderTemplateSyncTree(templateTree) : '<div class="sync-empty">暂无模板文件</div>';
+                users.innerHTML = userList.length ? renderTemplateSyncUsers(userList) : '<div class="sync-empty">暂无可同步用户</div>';
+                result.textContent = '';
+            } catch (error) {
+                tree.innerHTML = `<div class="sync-empty" style="color: #cf1322;">加载模板树失败：${escapeHtml(error.message)}</div>`;
+                users.innerHTML = `<div class="sync-empty" style="color: #cf1322;">加载用户列表失败：${escapeHtml(error.message)}</div>`;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 递归统计模板树节点数。
+        function countTemplateNodes(nodes) {
+            return (nodes || []).reduce((sum, node) => sum + 1 + countTemplateNodes(node.children || []), 0);
+        }
+
+        // 渲染模板树。
+        function renderTemplateSyncTree(nodes, depth = 0) {
+            return (nodes || []).map(node => renderTemplateSyncNode(node, depth)).join('');
+        }
+
+        // 渲染单个模板节点。
+        function renderTemplateSyncNode(node, depth = 0) {
+            const hasChildren = node.directory && node.children && node.children.length;
+            const children = hasChildren
+                ? `<div class="sync-node-children" hidden>${renderTemplateSyncTree(node.children, depth + 1)}</div>`
+                : '';
+            const toggle = node.directory
+                ? hasChildren
+                    ? `<button type="button" class="sync-node-toggle" aria-expanded="false" aria-label="展开或收起" title="展开或收起" onclick="toggleTemplateNode(this)">▶</button>`
+                    : `<span class="sync-node-toggle sync-node-toggle-placeholder" aria-hidden="true"></span>`
+                : `<span class="sync-node-toggle sync-node-toggle-placeholder" aria-hidden="true"></span>`;
+            return `
+                <div class="sync-node ${node.directory ? 'sync-node-directory' : 'sync-node-file'}" ${node.directory ? 'data-collapsed="true"' : ''}>
+                    <div class="sync-node-row">
+                        ${toggle}
+                        <label class="sync-node-label">
+                            <input type="checkbox" class="template-sync-path" value="${escapeHtml(node.relative_path)}" onclick="event.stopPropagation()">
+                            <span class="sync-node-kind">${node.directory ? '目录' : '文件'}</span>
+                            <span class="sync-node-name">${escapeHtml(node.name)}</span>
+                            <span class="sync-node-path">${escapeHtml(node.relative_path)}</span>
+                        </label>
+                    </div>
+                    ${children}
+                </div>
+            `;
+        }
+
+        // 切换单个目录节点的展开或收起状态。
+        function toggleTemplateNode(button) {
+            const group = button.closest('.sync-node-directory');
+            if (!group) return;
+            const children = group.querySelector('.sync-node-children');
+            if (!children) return;
+            const collapsed = group.dataset.collapsed !== 'false';
+            const nextCollapsed = !collapsed;
+            group.dataset.collapsed = nextCollapsed ? 'true' : 'false';
+            button.textContent = nextCollapsed ? '▶' : '▼';
+            button.setAttribute('aria-expanded', String(!nextCollapsed));
+            children.hidden = nextCollapsed;
+        }
+
+        // 全量展开或收起模板树。
+        function setTemplateTreeExpanded(expanded) {
+            document.querySelectorAll('#templateSyncTree .sync-node-directory').forEach(group => {
+                const children = group.querySelector('.sync-node-children');
+                const button = group.querySelector('button.sync-node-toggle');
+                if (children && button) {
+                    group.dataset.collapsed = expanded ? 'false' : 'true';
+                    button.textContent = expanded ? '▼' : '▶';
+                    button.setAttribute('aria-expanded', String(expanded));
+                    children.hidden = !expanded;
+                }
+            });
+        }
+
+        // 渲染用户列表。
+        function renderTemplateSyncUsers(users) {
+            return (users || []).map(user => `
+                <label class="sync-user-item">
+                    <input type="checkbox" class="template-sync-user" value="${escapeHtml(user)}">
+                    <span>${escapeHtml(user)}</span>
+                </label>
+            `).join('');
+        }
+
+        // 批量勾选或取消勾选模板节点。
+        function toggleTemplateSelection(checked) {
+            document.querySelectorAll('.template-sync-path').forEach(input => {
+                input.checked = checked;
+            });
+        }
+
+        // 批量勾选或取消勾选用户。
+        function toggleUserSelection(checked) {
+            document.querySelectorAll('.template-sync-user').forEach(input => {
+                input.checked = checked;
+            });
+        }
+
+        // 隐藏模板同步结果区域。
+        function hideTemplateSyncResult() {
+            const result = document.getElementById('templateSyncResult');
+            result.style.display = 'none';
+            result.textContent = '';
+            result.className = 'sync-result';
+        }
+
+        // 展示模板同步结果。
+        function showTemplateSyncResult(result, type = 'success') {
+            const box = document.getElementById('templateSyncResult');
+            const failures = result.failures || [];
+            const lines = [
+                result.message || '模板同步完成',
+                `成功复制：${result.copied_count || 0}`,
+                `跳过：${result.skipped_count || 0}`,
+                `失败：${failures.length}`
+            ];
+            if (failures.length > 0) {
+                lines.push('');
+                failures.forEach(item => {
+                    lines.push(`- ${item.user_id || '-'} | ${item.template_path || '-'} -> ${item.target_path || '-'} | ${item.message || '-'}`);
+                });
+            }
+            box.className = `sync-result ${type}`.trim();
+            box.textContent = lines.join('\n');
+            box.style.display = 'block';
+        }
+
+        // 提交模板同步。
+        async function runTemplateSync() {
+            const templatePaths = Array.from(document.querySelectorAll('.template-sync-path'))
+                .filter(input => input.checked)
+                .map(input => input.value);
+            const userIds = Array.from(document.querySelectorAll('.template-sync-user'))
+                .filter(input => input.checked)
+                .map(input => input.value);
+
+            if (templatePaths.length === 0) {
+                showToast('请至少选择一个模板文件或目录', 'error');
+                return;
+            }
+            if (userIds.length === 0) {
+                showToast('请至少选择一个目标用户', 'error');
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const result = await apiRequest(`${API_BASE}/admin/template-sync`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        template_paths: templatePaths,
+                        user_ids: userIds,
+                        overwrite: document.getElementById('templateSyncOverwrite').checked
+                    })
+                });
+                const ok = !!result.success;
+                showTemplateSyncResult(result, ok ? 'success' : 'error');
+                showToast(ok ? '模板同步完成' : '模板同步完成但有失败项', ok ? 'success' : 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
         // 打开指定弹窗。
         function openModal(id) {
             document.getElementById(id).classList.add('active');
@@ -907,6 +1290,9 @@
 
         // 当前运行时环境变量 ConfigMap 的 data 数据。
         let currentRuntimeConfigData = {};
+
+        // 当前模板同步弹窗加载到的数据。
+        let currentTemplateSyncOverview = null;
 
         // 加载控制器自身配置 ConfigMap。
         async function loadConfig() {

@@ -55,7 +55,12 @@ public class SkillDownloadService {
         }
 
         Path personalDataRoot = Path.of(properties.getPersonalDataMountPath()).toAbsolutePath().normalize();
-        Path skillsRoot = personalDataRoot.resolve(userId).normalize();
+        Path userSegment = Path.of(userId.trim()).normalize();
+        if (userSegment.isAbsolute() || userSegment.getNameCount() != 1 || ".".equals(userSegment.toString()) || "..".equals(userSegment.toString())) {
+            throw new IllegalArgumentException("invalid userId");
+        }
+
+        Path skillsRoot = personalDataRoot.resolve(userSegment).normalize();
         for (String segment : SKILLS_PATH) {
             skillsRoot = skillsRoot.resolve(segment).normalize();
         }

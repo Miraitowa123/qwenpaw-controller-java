@@ -4,13 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加httproute：在headers中添加userid">
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、新增skill的下载接口2、新增从nas获取api-key的接口">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyFileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyFileService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/SkillDownloadService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/SkillDownloadService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -221,7 +223,23 @@
       <option name="project" value="LOCAL" />
       <updated>1782283035137</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="1、新增skill的下载接口2、新增从nas获取api-key的接口">
+      <option name="closed" value="true" />
+      <created>1782298427416</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1782298427416</updated>
+    </task>
+    <task id="LOCAL-00012" summary="1、新增skill的下载接口2、新增从nas获取api-key的接口">
+      <option name="closed" value="true" />
+      <created>1782298764235</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1782298764235</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -248,7 +266,8 @@
     <MESSAGE value="1、优雅杀死qwenpaw2、每次新创建pod，会获取新的个人apikey，然后要复写掉provider的配置" />
     <MESSAGE value="1、每次新创建pod，会获取新的个人apikey，然后以env的方式注入到pod中" />
     <MESSAGE value="1、添加httproute：在headers中添加userid" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、添加httproute：在headers中添加userid" />
+    <MESSAGE value="1、新增skill的下载接口2、新增从nas获取api-key的接口" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、新增skill的下载接口2、新增从nas获取api-key的接口" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -35,6 +35,8 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | GET | `/bocompawAdmin/api/v1/skills/{skill_name}/download` | 下载当前用户指定技能目录 zip |
 | POST | `/bocompawAdmin/api/v1/admin/sync` | 同步用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |
+| GET | `/bocompawAdmin/api/v1/admin/template-sync` | 获取模板树和可同步用户列表 |
+| POST | `/bocompawAdmin/api/v1/admin/template-sync` | 将模板文件或目录同步到选中的用户 |
 | GET | `/bocompawAdmin/api/v1/admin/personal-api-keys` | 获取当前用户的 personal-api-key.json 和 api-key |
 | GET | `/bocompawAdmin/api/v1/admin/config` | 获取 Controller ConfigMap |
 | PUT | `/bocompawAdmin/api/v1/admin/config` | 更新 Controller ConfigMap |
@@ -138,6 +140,24 @@ curl -O -J "http://controller:8080/bocompawAdmin/api/v1/skills/%E6%8A%80%E8%83%B
 ```bash
 curl "http://controller:8080/bocompawAdmin/api/v1/admin/personal-api-keys" \
   -H "Cookie: userid=alice"
+```
+
+模板同步：
+
+```bash
+curl "http://controller:8080/bocompawAdmin/api/v1/admin/template-sync"
+```
+
+同步请求示例：
+
+```bash
+curl -X POST "http://controller:8080/bocompawAdmin/api/v1/admin/template-sync" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template_paths": ["working.secret/providers/custom/personal-api-key.json"],
+    "user_ids": ["user0", "user1"],
+    "overwrite": true
+  }'
 ```
 
 返回示例：

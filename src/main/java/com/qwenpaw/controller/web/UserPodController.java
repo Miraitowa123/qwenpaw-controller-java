@@ -5,11 +5,15 @@ import com.qwenpaw.controller.model.ConfigMapData;
 import com.qwenpaw.controller.model.ListUserPodsResponse;
 import com.qwenpaw.controller.model.UpdateConfigRequest;
 import com.qwenpaw.controller.model.UpdateConfigResponse;
+import com.qwenpaw.controller.model.TemplateSyncOverviewResponse;
+import com.qwenpaw.controller.model.TemplateSyncRequest;
+import com.qwenpaw.controller.model.TemplateSyncResult;
 import com.qwenpaw.controller.model.UserPodMapping;
 import com.qwenpaw.controller.model.UserPodResponse;
 import com.qwenpaw.controller.model.UserPersonalApiKeyResponse;
 import com.qwenpaw.controller.service.KubernetesService;
 import com.qwenpaw.controller.service.PersonalApiKeyFileService;
+import com.qwenpaw.controller.service.PersonalDataSyncService;
 import com.qwenpaw.controller.service.PodManager;
 import com.qwenpaw.controller.service.SkillDownloadService;
 import com.qwenpaw.controller.service.SkillDownloadService.SkillArchive;
@@ -76,6 +80,11 @@ public class UserPodController {
     private final PersonalApiKeyFileService personalApiKeyFileService;
 
     /**
+     * 模板同步服务。
+     */
+    private final PersonalDataSyncService personalDataSyncService;
+
+    /**
      * qwenpaw.* 配置项。
      */
     private final QwenPawProperties properties;
@@ -87,11 +96,13 @@ public class UserPodController {
                              KubernetesService kubernetesService,
                              SkillDownloadService skillDownloadService,
                              PersonalApiKeyFileService personalApiKeyFileService,
+                             PersonalDataSyncService personalDataSyncService,
                              QwenPawProperties properties) {
         this.podManager = podManager;
         this.kubernetesService = kubernetesService;
         this.skillDownloadService = skillDownloadService;
         this.personalApiKeyFileService = personalApiKeyFileService;
+        this.personalDataSyncService = personalDataSyncService;
         this.properties = properties;
     }
 
@@ -249,6 +260,42 @@ public class UserPodController {
     }
 
     /**
+     * 读取模板同步所需的模板树和用户列表。
+     */
+    @GetMapping("/admin/template-sync")
+    public TemplateSyncOverviewResponse getTemplateSyncOverview() {
+        try {
+            return personalDataSyncService.getOverview();
+        } catch (NoSuchFileException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, fileErrorMessage(e), e);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 把模板目录中选中的文件或目录同步到选中的用户目录。
+     */
+    @PostMapping("/admin/template-sync")
+    public TemplateSyncResult syncTemplateData(@RequestBody TemplateSyncRequest request) {
+        if (request.getTemplatePaths() == null || request.getTemplatePaths().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "template_paths is required");
+        }
+        if (request.getUserIds() == null || request.getUserIds().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "user_ids is required");
+        }
+        try {
+            return personalDataSyncService.sync(request);
+        } catch (NoSuchFileException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, fileErrorMessage(e), e);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
+        } catch (IOException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, e.getMessage(), e);
+        }
+    }
+
+    /**
      * 读取控制器自身配置 ConfigMap，供管理页面展示。
      */
     @GetMapping("/admin/config")
@@ -361,6 +408,17 @@ public class UserPodController {
             return null;
         }
         return userId.toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * 把文件异常转换成前端可读错误。
+     */
+    private String fileErrorMessage(NoSuchFileException e) {
+        String reason = e.getReason();
+        if (reason == null || reason.isBlank()) {
+            return e.getFile();
+        }
+        return reason + ": " + e.getFile();
     }
 
     /**
