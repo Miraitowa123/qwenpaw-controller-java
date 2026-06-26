@@ -4,15 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、新增skill的下载接口2、新增从nas获取api-key的接口">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、新增模版同步功能">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalDataSyncService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyFileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyFileService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/SkillDownloadService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/SkillDownloadService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -239,7 +233,15 @@
       <option name="project" value="LOCAL" />
       <updated>1782298764235</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="1、新增模版同步功能">
+      <option name="closed" value="true" />
+      <created>1782448634369</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1782448634369</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -267,7 +269,8 @@
     <MESSAGE value="1、每次新创建pod，会获取新的个人apikey，然后以env的方式注入到pod中" />
     <MESSAGE value="1、添加httproute：在headers中添加userid" />
     <MESSAGE value="1、新增skill的下载接口2、新增从nas获取api-key的接口" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、新增skill的下载接口2、新增从nas获取api-key的接口" />
+    <MESSAGE value="1、新增模版同步功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、新增模版同步功能" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
