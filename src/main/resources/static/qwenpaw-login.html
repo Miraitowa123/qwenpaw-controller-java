@@ -43,17 +43,10 @@
 <body>
     <main class="panel">
         <h1 class="title">正在进入 QwenPaw</h1>
-        <p class="message" id="message">正在登录...</p>
+        <p class="message" id="message">正在进入...</p>
     </main>
 
     <script>
-        // 自动登录 QwenPaw 使用的固定账号参数。
-        const LOGIN_PAYLOAD = {
-            username: 'admin',
-            password: 'admin123',
-            expires_in: 86400
-        };
-
         // 页面中展示登录状态或错误信息的元素。
         const messageEl = document.getElementById('message');
 
@@ -68,8 +61,8 @@
             document.cookie = `userid=${encodeURIComponent(userId)}; path=/`;
         }
 
-        // 从 URL 获取 user_id，登录 QwenPaw 后跳转到聊天页。
-        async function loginAndRedirect() {
+        // 从 URL 获取 user_id，设置路由 Cookie 后跳转到聊天页。
+        function enterAndRedirect() {
             // params 保存当前页面 URL 查询参数。
             const params = new URLSearchParams(window.location.search);
 
@@ -82,35 +75,15 @@
             }
 
             setUserCookie(userId);
-
-            // response 是 QwenPaw 登录接口返回结果。
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(LOGIN_PAYLOAD)
-            });
-
-            if (!response.ok) {
-                // errorText 尽量保留后端返回的失败原因。
-                const errorText = await response.text().catch(() => '');
-                throw new Error(errorText || `登录失败，HTTP ${response.status}`);
-            }
-
-            // data 中应包含 QwenPaw 前端后续请求使用的 token。
-            const data = await response.json();
-            if (!data.token) {
-                throw new Error('登录响应缺少 token。');
-            }
-
-            localStorage.setItem('qwenpaw_auth_token', data.token);
             window.location.replace('/chat');
         }
 
-        // 页面加载后立即执行自动登录，失败时停留在当前页展示原因。
-        loginAndRedirect().catch(error => {
-            setMessage(error.message || '登录失败。', true);
-        });
+        // 页面加载后立即进入 QwenPaw，失败时停留在当前页展示原因。
+        try {
+            enterAndRedirect();
+        } catch (error) {
+            setMessage(error.message || '进入失败。', true);
+        }
     </script>
 </body>
 </html>
