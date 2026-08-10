@@ -108,7 +108,40 @@ public class KubernetesService {
         if (pod == null || pod.getStatus() == null) {
             return PodStatus.UNKNOWN;
         }
+        if (pod.getMetadata() != null && pod.getMetadata().getDeletionTimestamp() != null) {
+            return PodStatus.TERMINATING;
+        }
+        if ("Running".equals(pod.getStatus().getPhase()) && !isReady(pod)) {
+            return PodStatus.PENDING;
+        }
         return mapPhaseToStatus(pod.getStatus().getPhase());
+    }
+
+    /**
+     * 按名称读取 Deployment，供多副本 Controller 以 Kubernetes 为统一状态源。
+     */
+    public Deployment getDeployment(String deploymentName) {
+        return client.apps()
+                .deployments()
+                .inNamespace(properties.getK8sNamespace())
+                .withName(deploymentName)
+                .get();
+    }
+
+    /**
+     * Pod 尚未生成时，根据 Deployment condition 判断创建中或创建失败。
+     */
+    public PodStatus getDeploymentStatus(Deployment deployment) {
+        if (deployment == null || deployment.getStatus() == null
+                || deployment.getStatus().getConditions() == null) {
+            return PodStatus.CREATING;
+        }
+        boolean failed = deployment.getStatus().getConditions().stream()
+                .anyMatch(condition -> ("ReplicaFailure".equals(condition.getType())
+                        && "True".equals(condition.getStatus()))
+                        || ("Progressing".equals(condition.getType())
+                        && "False".equals(condition.getStatus())));
+        return failed ? PodStatus.FAILED : PodStatus.CREATING;
     }
 
     /**
@@ -138,11 +171,7 @@ public class KubernetesService {
     public String createDeployment(String userId) {
         // 用户相关 Kubernetes 资源统一使用 qwenpaw-{userId} 命名。
         String deploymentName = resourceName(userId);
-        Deployment existing = client.apps()
-                .deployments()
-                .inNamespace(properties.getK8sNamespace())
-                .withName(deploymentName)
-                .get();
+        Deployment existing = getDeployment(deploymentName);
         if (existing != null) {
             log.info("Deployment {} already exists", deploymentName);
             return deploymentName;
@@ -236,8 +265,15 @@ public class KubernetesService {
                 .endSpec()
                 .build();
 
-        client.apps().deployments().inNamespace(properties.getK8sNamespace()).resource(deployment).create();
-        log.info("Created deployment {}", deploymentName);
+        try {
+            client.apps().deployments().inNamespace(properties.getK8sNamespace()).resource(deployment).create();
+            log.info("Created deployment {}", deploymentName);
+        } catch (KubernetesClientException e) {
+            if (e.getCode() != 409) {
+                throw e;
+            }
+            log.info("Deployment {} was created concurrently", deploymentName);
+        }
         return deploymentName;
     }
 
@@ -284,8 +320,15 @@ public class KubernetesService {
                 .endSpec()
                 .build();
 
-        client.services().inNamespace(properties.getK8sNamespace()).resource(service).create();
-        log.info("Created service {}", serviceName);
+        try {
+            client.services().inNamespace(properties.getK8sNamespace()).resource(service).create();
+            log.info("Created service {}", serviceName);
+        } catch (KubernetesClientException e) {
+            if (e.getCode() != 409) {
+                throw e;
+            }
+            log.info("Service {} was created concurrently", serviceName);
+        }
         return serviceName;
     }
 
@@ -354,11 +397,18 @@ public class KubernetesService {
                 .build());
         httpRoute.setAdditionalProperty("spec", spec);
 
-        client.genericKubernetesResources(HTTP_ROUTE_CONTEXT)
-                .inNamespace(properties.getK8sNamespace())
-                .resource(httpRoute)
-                .create();
-        log.info("Created HTTPRoute {}", routeName);
+        try {
+            client.genericKubernetesResources(HTTP_ROUTE_CONTEXT)
+                    .inNamespace(properties.getK8sNamespace())
+                    .resource(httpRoute)
+                    .create();
+            log.info("Created HTTPRoute {}", routeName);
+        } catch (KubernetesClientException e) {
+            if (e.getCode() != 409) {
+                throw e;
+            }
+            log.info("HTTPRoute {} was created concurrently", routeName);
+        }
         return routeName;
     }
 

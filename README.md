@@ -26,7 +26,7 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 
 | 方法 | 路径 | 描述 |
 |------|------|------|
-| POST | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 获取或创建用户 Pod |
+| POST | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 获取或触发创建用户 Pod；运行中返回 200，启动中返回 202 |
 | GET | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 查询用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/users/{user_id}/pod/restart` | 重启用户 Pod |
 | DELETE | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 删除用户 Pod |

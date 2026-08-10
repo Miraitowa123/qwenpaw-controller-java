@@ -3,6 +3,7 @@ package com.qwenpaw.controller.web;
 import com.qwenpaw.controller.config.QwenPawProperties;
 import com.qwenpaw.controller.model.ConfigMapData;
 import com.qwenpaw.controller.model.ListUserPodsResponse;
+import com.qwenpaw.controller.model.PodStatus;
 import com.qwenpaw.controller.model.UpdateConfigRequest;
 import com.qwenpaw.controller.model.UpdateConfigResponse;
 import com.qwenpaw.controller.model.TemplateSyncOverviewResponse;
@@ -107,18 +108,29 @@ public class UserPodController {
     }
 
     /**
-     * 创建用户 Pod；如果已经存在则直接返回现有 Pod。
+     * 确保用户资源存在；不等待 Pod Ready，启动中返回 202。
      */
     @PostMapping("/users/{userId}/pod")
-    public UserPodResponse createOrGetUserPod(@PathVariable String userId) {
+    public ResponseEntity<UserPodResponse> createOrGetUserPod(@PathVariable String userId) {
         // 所有 Kubernetes 标签和资源名都使用统一的小写用户 ID。
         String normalizedUserId = normalizeUserId(userId);
         log.info("Processing pod request for user {}", normalizedUserId);
-        UserPodMapping mapping = podManager.getOrCreateUserPod(normalizedUserId)
+        UserPodMapping mapping = podManager.ensureUserPod(normalizedUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create or get user pod"));
         UserPodResponse response = UserPodResponse.from(mapping);
-        response.setMessage("Pod is ready");
-        return response;
+        if (mapping.getStatus() == PodStatus.RUNNING) {
+            response.setMessage("Pod is ready");
+            return ResponseEntity.ok(response);
+        }
+        if (mapping.getStatus() == PodStatus.CREATING
+                || mapping.getStatus() == PodStatus.PENDING
+                || mapping.getStatus() == PodStatus.RESTARTING
+                || mapping.getStatus() == PodStatus.TERMINATING) {
+            response.setMessage("Pod is starting");
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+        }
+        response.setMessage("Pod status is abnormal");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
     /**

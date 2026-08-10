@@ -6,6 +6,7 @@ import com.qwenpaw.controller.model.UserPodMapping;
 import io.fabric8.kubernetes.api.model.GenericKubernetesResource;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -65,44 +66,41 @@ public class PodManager {
     }
 
     /**
-     * 获取用户 Pod；不存在时创建，异常状态可重启时尝试恢复。
+     * 确保用户 Deployment、Service 和 HTTPRoute 存在，不等待 Pod Ready。
      */
-    public Optional<UserPodMapping> getOrCreateUserPod(String userId) {
+    public Optional<UserPodMapping> ensureUserPod(String userId) {
         if (userId == null || userId.isBlank()) {
             return Optional.empty();
         }
 
-        // 先按标签查找已有 Pod，避免重复创建同一个用户的 Deployment。
-        Optional<UserPodMapping> existing = findUserPod(userId);
-        if (existing.isPresent()) {
-            UserPodMapping mapping = existing.get();
-            mapping.setLastAccess(now());
-            mapping.setUpdatedAt(now());
-            if (mapping.getStatus() == PodStatus.RUNNING) {
-                return Optional.of(mapping);
-            }
-            if ((mapping.getStatus() == PodStatus.PENDING || mapping.getStatus() == PodStatus.CREATING)
-                    && kubernetesService.waitForPodReady(mapping.getDeploymentName())) {
-                mapping.setStatus(PodStatus.RUNNING);
-                return Optional.of(mapping);
-            }
-            if (mapping.getStatus().canRestart() && restartUserPod(mapping)) {
-                return Optional.of(mapping);
-            }
-        }
-
-        return createUserPod(userId);
+        kubernetesService.createDeployment(userId);
+        // Service 和 HTTPRoute 可以先创建；Pod Ready 后端点会自动变为可用。
+        kubernetesService.createService(userId);
+        kubernetesService.createHttpRoute(userId);
+        return getUserPod(userId);
     }
 
     /**
-     * 查询用户 Pod，并用 Kubernetes 当前状态刷新映射对象。
+     * 查询用户 Deployment/Pod，并完全根据 Kubernetes 当前状态生成映射。
      */
     public Optional<UserPodMapping> getUserPod(String userId) {
-        return findUserPod(userId)
-                .map(mapping -> {
-                    mapping.setStatus(kubernetesService.getPodStatus(mapping.getPodName()));
-                    return mapping;
-                });
+        String deploymentName = resourceName(userId);
+        Deployment deployment = kubernetesService.getDeployment(deploymentName);
+        if (deployment == null) {
+            return Optional.empty();
+        }
+
+        Optional<UserPodMapping> pod = findUserPod(userId);
+        if (pod.isPresent()) {
+            return pod;
+        }
+
+        UserPodMapping mapping = newMapping(userId);
+        mapping.setStatus(kubernetesService.getDeploymentStatus(deployment));
+        if (deployment.getMetadata() != null && deployment.getMetadata().getCreationTimestamp() != null) {
+            mapping.setCreatedAt(OffsetDateTime.parse(deployment.getMetadata().getCreationTimestamp()));
+        }
+        return Optional.of(mapping);
     }
 
     /**
@@ -122,12 +120,11 @@ public class PodManager {
      * 删除指定用户的 HTTPRoute、Service 和 Deployment。
      */
     public boolean deleteUserPod(String userId) {
-        Optional<UserPodMapping> mapping = findUserPod(userId);
-        if (mapping.isEmpty()) {
+        UserPodMapping pod = getUserPod(userId).orElse(null);
+        if (pod == null) {
             log.warn("User {} has no pod", userId);
             return false;
         }
-        UserPodMapping pod = mapping.get();
         kubernetesService.deleteHttpRoute(pod.getHttprouteName());
         kubernetesService.deleteService(pod.getServiceName());
         kubernetesService.deleteDeployment(pod.getDeploymentName());
@@ -221,42 +218,6 @@ public class PodManager {
     }
 
     /**
-     * 创建用户对应的 Deployment、Service 和 HTTPRoute。
-     */
-    private Optional<UserPodMapping> createUserPod(String userId) {
-        // mapping 是返回给上层的资源视图，真实 Pod 名称会在 Deployment 拉起后补上。
-        UserPodMapping mapping = newMapping(userId);
-        mapping.setStatus(PodStatus.CREATING);
-
-        try {
-            // createDeployment 会把 initContainer、主容器和 NAS 挂载写进 Pod 模板。
-            kubernetesService.createDeployment(userId);
-            if (!kubernetesService.waitForPodReady(mapping.getDeploymentName())) {
-                mapping.setStatus(PodStatus.FAILED);
-                return Optional.empty();
-            }
-
-            // Deployment 创建 Pod 后，按标签找回真实 Pod 名称。
-            List<Pod> pods = kubernetesService.listPodsByLabel(Map.of(
-                    "app", properties.getQwenpawAppLabel(),
-                    "user", userId));
-            if (!pods.isEmpty()) {
-                mapping.setPodName(pods.get(0).getMetadata().getName());
-            }
-
-            kubernetesService.createService(userId);
-            kubernetesService.createHttpRoute(userId);
-            mapping.setStatus(PodStatus.RUNNING);
-            mapping.setUpdatedAt(now());
-            return Optional.of(mapping);
-        } catch (RuntimeException e) {
-            log.error("Failed to create pod for user {}", userId, e);
-            mapping.setStatus(PodStatus.FAILED);
-            return Optional.empty();
-        }
-    }
-
-    /**
      * 重启已有用户 Pod；这里不会重建 Deployment 模板，只删除当前 Pod 让 Deployment 自动拉起新 Pod。
      */
     private boolean restartUserPod(UserPodMapping mapping) {
@@ -319,7 +280,7 @@ public class PodManager {
      */
     private UserPodMapping newMapping(String userId) {
         // 当前实现让用户相关资源共享同一个 qwenpaw-{userId} 名称。
-        String resourceName = "qwenpaw-" + userId;
+        String resourceName = resourceName(userId);
         UserPodMapping mapping = new UserPodMapping();
         mapping.setUserId(userId);
         mapping.setPodName("");
@@ -331,6 +292,13 @@ public class PodManager {
         mapping.setUpdatedAt(now());
         mapping.setLastAccess(now());
         return mapping;
+    }
+
+    /**
+     * 用户 Kubernetes 资源使用的确定性名称。
+     */
+    private String resourceName(String userId) {
+        return "qwenpaw-" + userId;
     }
 
     /**
