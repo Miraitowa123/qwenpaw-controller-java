@@ -50,6 +50,10 @@ rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Cross-replica per-user provisioning lock
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "create", "update", "delete"]
   # Gateway API - HTTPRoute management
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
@@ -156,7 +160,7 @@ metadata:
   labels:
     app: qwenpaw-controller
 spec:
-  replicas: 1
+  replicas: 2
   strategy:
     type: Recreate
   selector:

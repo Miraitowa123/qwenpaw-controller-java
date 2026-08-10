@@ -88,16 +88,23 @@ public class KubernetesService {
     private final EllmEndpointResolver ellmEndpointResolver;
 
     /**
+     * 同一用户创建流程的 Kubernetes 分布式锁，支持 Controller 多副本。
+     */
+    private final KubernetesLeaseLock provisioningLock;
+
+    /**
      * 注入 Kubernetes 客户端、配置对象、个人 API Key 服务和 ELLM 端点解析服务。
      */
     public KubernetesService(KubernetesClient client,
                              QwenPawProperties properties,
                              PersonalApiKeyService personalApiKeyService,
-                             EllmEndpointResolver ellmEndpointResolver) {
+                             EllmEndpointResolver ellmEndpointResolver,
+                             KubernetesLeaseLock provisioningLock) {
         this.client = client;
         this.properties = properties;
         this.personalApiKeyService = personalApiKeyService;
         this.ellmEndpointResolver = ellmEndpointResolver;
+        this.provisioningLock = provisioningLock;
     }
 
     /**
@@ -174,6 +181,21 @@ public class KubernetesService {
         Deployment existing = getDeployment(deploymentName);
         if (existing != null) {
             log.info("Deployment {} already exists", deploymentName);
+            return deploymentName;
+        }
+
+        // 多个 Controller Pod 可能同时收到同一用户请求。Lease 让完整初始化流程跨 Pod 串行执行。
+        return provisioningLock.withLock(deploymentName,
+                () -> createDeploymentWithLock(userId, deploymentName));
+    }
+
+    /**
+     * 已持有用户 Lease 后创建 Deployment；必须二次检查，避免等待锁期间资源已由其他副本创建。
+     */
+    private String createDeploymentWithLock(String userId, String deploymentName) {
+        Deployment existing = getDeployment(deploymentName);
+        if (existing != null) {
+            log.info("Deployment {} was created while waiting for provisioning lease", deploymentName);
             return deploymentName;
         }
 
