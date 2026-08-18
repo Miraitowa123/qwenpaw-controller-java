@@ -4,10 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、最后一下commit，以后不在公网维护了，在内网">
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、提交变更脚本">
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/RedisConfig.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/IdlePodCleanService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/deployments/k8s.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/deployments/k8s.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/qwenpaw-login.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/qwenpaw-login.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/QwenPawControllerApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/QwenPawControllerApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,6 +39,13 @@
         </projects_view>
       </state>
     </system>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -141,6 +152,7 @@
       <workItem from="1784185287634" duration="872000" />
       <workItem from="1784787377952" duration="94000" />
       <workItem from="1784792791752" duration="11850000" />
+      <workItem from="1785472286157" duration="71111000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -270,7 +282,39 @@
       <option name="project" value="LOCAL" />
       <updated>1782914353286</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="1、把qwenpaw的鉴权关闭">
+      <option name="closed" value="true" />
+      <created>1785748230253</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1785748230253</updated>
+    </task>
+    <task id="LOCAL-00018" summary="1、适配动态起停">
+      <option name="closed" value="true" />
+      <created>1786329444918</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1786329444918</updated>
+    </task>
+    <task id="LOCAL-00019" summary="1、修复并发线程安全问题">
+      <option name="closed" value="true" />
+      <created>1786349641356</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1786349641356</updated>
+    </task>
+    <task id="LOCAL-00020" summary="1、提交变更脚本">
+      <option name="closed" value="true" />
+      <created>1786350015329</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1786350015329</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -301,18 +345,11 @@
     <MESSAGE value="1、新增模版同步功能" />
     <MESSAGE value="1、patch所有存量pod的deployment模版，在其中添加personal-api-key" />
     <MESSAGE value="1、最后一下commit，以后不在公网维护了，在内网" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、最后一下commit，以后不在公网维护了，在内网" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PersonalApiKeyService.java</url>
-          <line>75</line>
-          <option name="timeStamp" value="28" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
+    <MESSAGE value="1、把qwenpaw的鉴权关闭" />
+    <MESSAGE value="1、适配动态起停" />
+    <MESSAGE value="1、修复并发线程安全问题" />
+    <MESSAGE value="1、提交变更脚本" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、提交变更脚本" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
