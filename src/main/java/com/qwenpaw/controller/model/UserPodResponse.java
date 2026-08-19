@@ -63,6 +63,16 @@ public class UserPodResponse {
     private OffsetDateTime updatedAt;
 
     /**
+     * Agent Gateway 最近一次刷新 Redis 心跳的时间。
+     */
+    private OffsetDateTime lastAccess;
+
+    /**
+     * Redis 心跳键距离过期的剩余秒数。
+     */
+    private Long heartbeatTtlSeconds;
+
+    /**
      * 将内部映射对象转换成接口响应对象。
      */
     public static UserPodResponse from(UserPodMapping mapping) {
@@ -232,5 +242,21 @@ public class UserPodResponse {
      */
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public OffsetDateTime getLastAccess() {
+        return lastAccess;
+    }
+
+    public void setLastAccess(OffsetDateTime lastAccess) {
+        this.lastAccess = lastAccess;
+    }
+
+    public Long getHeartbeatTtlSeconds() {
+        return heartbeatTtlSeconds;
+    }
+
+    public void setHeartbeatTtlSeconds(Long heartbeatTtlSeconds) {
+        this.heartbeatTtlSeconds = heartbeatTtlSeconds;
     }
 }

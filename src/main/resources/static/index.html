@@ -115,6 +115,12 @@
             color: #666;
         }
         tr:hover { background: #fafafa; }
+        #podTableContainer { overflow-x: auto; }
+        .last-used { min-width: 160px; white-space: nowrap; }
+        .heartbeat-remaining { min-width: 150px; white-space: nowrap; }
+        .heartbeat-countdown { color: #1890ff; font-size: 12px; margin-top: 2px; }
+        .heartbeat-countdown.expired { color: #cf1322; }
+        .heartbeat-countdown.missing { color: #999; }
         .status {
             display: inline-block;
             padding: 2px 10px;
@@ -776,6 +782,9 @@
         // 当前详情弹窗展示的 Pod 数据。
         let currentDetail = null;
 
+        // Pod 表格中的心跳过期倒计时定时器。
+        let heartbeatCountdownTimer = null;
+
         // 当前浏览器终端连接使用的 WebSocket。
         let terminalSocket = null;
 
@@ -839,6 +848,70 @@
             return d.toLocaleString('zh-CN');
         }
 
+        // 最新使用时间统一显示为完整的年月日和时分秒。
+        function formatLastUsedDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            if (Number.isNaN(date.getTime())) return '-';
+            const parts = new Intl.DateTimeFormat('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).formatToParts(date);
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`;
+        }
+
+        // 把 Redis 心跳 TTL 格式化为 72 小时窗口内的实时倒计时。
+        function formatHeartbeatCountdown(totalSeconds) {
+            const seconds = Math.max(0, Math.floor(totalSeconds));
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            const time = [hours, minutes, secs].map(value => String(value).padStart(2, '0')).join(':');
+            return days > 0 ? `距清理 ${days}天 ${time}` : `距清理 ${time}`;
+        }
+
+        // 刷新页面中所有用户心跳的剩余时间。
+        function updateHeartbeatCountdowns() {
+            document.querySelectorAll('[data-heartbeat-expires-at]').forEach(element => {
+                const expiresAt = Number(element.dataset.heartbeatExpiresAt);
+                const remainingSeconds = Math.ceil((expiresAt - Date.now()) / 1000);
+                if (remainingSeconds <= 0) {
+                    element.textContent = '心跳已过期，等待清理';
+                    element.classList.add('expired');
+                    return;
+                }
+                element.textContent = formatHeartbeatCountdown(remainingSeconds);
+            });
+        }
+
+        // 单独渲染 Redis 最近一次刷新的时间。
+        function renderLastUsed(pod) {
+            return `<div class="last-used">${formatLastUsedDate(pod.last_access)}</div>`;
+        }
+
+        // 单独渲染 Redis 心跳键的 72 小时剩余倒计时。
+        function renderHeartbeatRemaining(pod) {
+            if (!pod.last_access) {
+                return '<div class="heartbeat-remaining heartbeat-countdown missing">无心跳记录</div>';
+            }
+            if (pod.heartbeat_ttl_seconds == null) {
+                return '<div class="heartbeat-remaining heartbeat-countdown missing">TTL 不可用</div>';
+            }
+            const ttlSeconds = Number(pod.heartbeat_ttl_seconds);
+            if (!Number.isFinite(ttlSeconds)) {
+                return '<div class="heartbeat-remaining heartbeat-countdown missing">TTL 不可用</div>';
+            }
+            const expiresAt = Date.now() + Math.max(0, ttlSeconds) * 1000;
+            return `<div class="heartbeat-remaining heartbeat-countdown" data-heartbeat-expires-at="${expiresAt}"></div>`;
+        }
+
         // 加载所有用户 Pod 并刷新列表。
         async function loadPods() {
             showLoading(true);
@@ -853,6 +926,10 @@
         // 根据 Pod 列表渲染管理台表格。
         function renderPodTable(pods) {
             const container = document.getElementById('podTableContainer');
+            if (heartbeatCountdownTimer) {
+                clearInterval(heartbeatCountdownTimer);
+                heartbeatCountdownTimer = null;
+            }
             if (!pods || pods.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
@@ -880,6 +957,8 @@
                         <td>${deploymentName}</td>
                         <td>${serviceName}</td>
                         <td>${formatDate(pod.created_at)}</td>
+                        <td>${renderLastUsed(pod)}</td>
+                        <td>${renderHeartbeatRemaining(pod)}</td>
                         <td>
                             <div class="actions">
                                 <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
@@ -910,12 +989,16 @@
                             <th>Deployment</th>
                             <th>Service</th>
                             <th>创建时间</th>
+                            <th>最新使用时间</th>
+                            <th>72h 剩余时间</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
             `;
+            updateHeartbeatCountdowns();
+            heartbeatCountdownTimer = setInterval(updateHeartbeatCountdowns, 1000);
         }
 
         // 根据输入框中的用户 ID 创建或获取用户 Pod。

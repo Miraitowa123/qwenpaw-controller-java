@@ -13,6 +13,7 @@ import com.qwenpaw.controller.model.UserPodMapping;
 import com.qwenpaw.controller.model.UserPodResponse;
 import com.qwenpaw.controller.model.UserPersonalApiKeyResponse;
 import com.qwenpaw.controller.service.KubernetesService;
+import com.qwenpaw.controller.service.AgentHeartbeatService;
 import com.qwenpaw.controller.service.PersonalApiKeyFileService;
 import com.qwenpaw.controller.service.PersonalDataSyncService;
 import com.qwenpaw.controller.service.PodManager;
@@ -91,6 +92,11 @@ public class UserPodController {
     private final QwenPawProperties properties;
 
     /**
+     * 读取网关写入 Redis 的用户最后访问心跳。
+     */
+    private final AgentHeartbeatService agentHeartbeatService;
+
+    /**
      * 注入 Pod 编排、Kubernetes 操作和配置对象。
      */
     public UserPodController(PodManager podManager,
@@ -98,13 +104,15 @@ public class UserPodController {
                              SkillDownloadService skillDownloadService,
                              PersonalApiKeyFileService personalApiKeyFileService,
                              PersonalDataSyncService personalDataSyncService,
-                             QwenPawProperties properties) {
+                             QwenPawProperties properties,
+                             AgentHeartbeatService agentHeartbeatService) {
         this.podManager = podManager;
         this.kubernetesService = kubernetesService;
         this.skillDownloadService = skillDownloadService;
         this.personalApiKeyFileService = personalApiKeyFileService;
         this.personalDataSyncService = personalDataSyncService;
         this.properties = properties;
+        this.agentHeartbeatService = agentHeartbeatService;
     }
 
     /**
@@ -189,7 +197,14 @@ public class UserPodController {
     public ListUserPodsResponse listUserPods() {
         List<UserPodResponse> users = podManager.listUserPods()
                 .stream()
-                .map(UserPodResponse::from)
+                .map(mapping -> {
+                    UserPodResponse response = UserPodResponse.from(mapping);
+                    AgentHeartbeatService.HeartbeatStatus heartbeat =
+                            agentHeartbeatService.getStatus(mapping.getUserId());
+                    response.setLastAccess(heartbeat.lastAccess());
+                    response.setHeartbeatTtlSeconds(heartbeat.ttlSeconds());
+                    return response;
+                })
                 .toList();
         return new ListUserPodsResponse(users);
     }
