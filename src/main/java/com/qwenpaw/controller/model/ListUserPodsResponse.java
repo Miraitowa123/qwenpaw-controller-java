@@ -18,11 +18,36 @@ public class ListUserPodsResponse {
     private int total;
 
     /**
+     * 当前页码，从 1 开始。
+     */
+    private int page;
+
+    /**
+     * 每页最多返回的 Pod 数量。
+     */
+    private int pageSize;
+
+    /**
+     * 总页数；没有 Pod 时为 0。
+     */
+    private int totalPages;
+
+    /**
      * 创建列表响应，并根据列表长度填充总数。
      */
     public ListUserPodsResponse(List<UserPodResponse> users) {
+        this(users, users.size(), 1, users.size());
+    }
+
+    /**
+     * 创建分页列表响应。
+     */
+    public ListUserPodsResponse(List<UserPodResponse> users, int total, int page, int pageSize) {
         this.users = users;
-        this.total = users.size();
+        this.total = total;
+        this.page = page;
+        this.pageSize = pageSize;
+        this.totalPages = total == 0 || pageSize == 0 ? 0 : ((total - 1) / pageSize) + 1;
     }
 
     /**
@@ -51,5 +76,29 @@ public class ListUserPodsResponse {
      */
     public void setTotal(int total) {
         this.total = total;
+    }
+
+    public int getPage() {
+        return page;
+    }
+
+    public void setPage(int page) {
+        this.page = page;
+    }
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(int pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    public int getTotalPages() {
+        return totalPages;
+    }
+
+    public void setTotalPages(int totalPages) {
+        this.totalPages = totalPages;
     }
 }

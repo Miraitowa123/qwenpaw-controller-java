@@ -31,7 +31,7 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | POST | `/bocompawAdmin/api/v1/users/{user_id}/pod/restart` | 重启用户 Pod |
 | DELETE | `/bocompawAdmin/api/v1/users/{user_id}/pod` | 删除用户 Pod |
 | GET | `/bocompawAdmin/api/v1/users/{user_id}/logs` | 获取用户 Pod 日志 |
-| GET | `/bocompawAdmin/api/v1/users/pods` | 列出所有用户 Pod |
+| GET | `/bocompawAdmin/api/v1/users/pods` | 列出用户 Pod；可通过 `page`、`page_size` 分页（每页最多 100 条），不传参数时兼容原有全量返回 |
 | GET | `/bocompawAdmin/api/v1/skills/{skill_name}/download` | 下载当前用户指定技能目录 zip |
 | POST | `/bocompawAdmin/api/v1/admin/sync` | 同步用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |

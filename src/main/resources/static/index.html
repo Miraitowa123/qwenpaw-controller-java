@@ -99,6 +99,15 @@
             margin-bottom: 16px;
             color: #1a1a1a;
         }
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .card-title-row .card-title { margin-bottom: 0; }
+        .pod-count { color: #666; font-size: 13px; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -116,6 +125,30 @@
         }
         tr:hover { background: #fafafa; }
         #podTableContainer { overflow-x: auto; }
+        .pod-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 16px;
+            color: #666;
+            font-size: 13px;
+            flex-wrap: wrap;
+        }
+        .pod-pagination .btn { padding: 5px 12px; }
+        .pod-pagination .btn:disabled {
+            cursor: not-allowed;
+            color: #bfbfbf;
+            border-color: #e8e8e8;
+            background: #fafafa;
+        }
+        .pod-pagination select {
+            padding: 5px 8px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            color: #333;
+            background: #fff;
+        }
         .last-used { min-width: 160px; white-space: nowrap; }
         .heartbeat-remaining { min-width: 150px; white-space: nowrap; }
         .heartbeat-countdown { color: #1890ff; font-size: 12px; margin-top: 2px; }
@@ -592,7 +625,10 @@
         </div>
 
         <div class="card">
-            <div class="card-title">Pod 列表</div>
+            <div class="card-title-row">
+                <div class="card-title">Pod 列表</div>
+                <div class="pod-count" id="podTotalCount">共 0 个 Pod</div>
+            </div>
             <div id="podTableContainer">
                 <div class="empty-state">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -602,6 +638,7 @@
                     <p>暂无 Pod 数据</p>
                 </div>
             </div>
+            <div class="pod-pagination" id="podPagination" style="display: none;"></div>
         </div>
     </div>
 
@@ -785,6 +822,11 @@
         // Pod 表格中的心跳过期倒计时定时器。
         let heartbeatCountdownTimer = null;
 
+        // Pod 列表当前分页状态。
+        let currentPodPage = 1;
+        let podPageSize = 20;
+        let podTotalPages = 0;
+
         // 当前浏览器终端连接使用的 WebSocket。
         let terminalSocket = null;
 
@@ -912,15 +954,64 @@
             return `<div class="heartbeat-remaining heartbeat-countdown" data-heartbeat-expires-at="${expiresAt}"></div>`;
         }
 
-        // 加载所有用户 Pod 并刷新列表。
-        async function loadPods() {
+        // 加载指定页用户 Pod 并刷新列表。
+        async function loadPods(page = currentPodPage) {
+            const requestedPage = Math.max(1, Number(page) || 1);
             showLoading(true);
             try {
-                const data = await apiRequest(`${API_BASE}/users/pods`);
+                const params = new URLSearchParams({
+                    page: String(requestedPage),
+                    page_size: String(podPageSize)
+                });
+                const data = await apiRequest(`${API_BASE}/users/pods?${params}`);
+                podTotalPages = Number(data.total_pages) || 0;
+                if (podTotalPages > 0 && requestedPage > podTotalPages) {
+                    await loadPods(podTotalPages);
+                    return;
+                }
+                currentPodPage = Number(data.page) || requestedPage;
                 renderPodTable(data.users || []);
+                renderPodPagination(data);
             } finally {
                 showLoading(false);
             }
+        }
+
+        // 渲染总数、翻页按钮和每页条数选择器。
+        function renderPodPagination(data) {
+            const total = Number(data.total) || 0;
+            const totalPages = Number(data.total_pages) || 0;
+            const pagination = document.getElementById('podPagination');
+            document.getElementById('podTotalCount').textContent = `共 ${total} 个 Pod`;
+            if (total === 0) {
+                pagination.style.display = 'none';
+                pagination.innerHTML = '';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            pagination.innerHTML = `
+                <span>第 ${currentPodPage} / ${totalPages} 页</span>
+                <button class="btn btn-default" onclick="loadPods(${currentPodPage - 1})"
+                        ${currentPodPage <= 1 ? 'disabled' : ''}>上一页</button>
+                <button class="btn btn-default" onclick="loadPods(${currentPodPage + 1})"
+                        ${currentPodPage >= totalPages ? 'disabled' : ''}>下一页</button>
+                <label>
+                    每页
+                    <select onchange="changePodPageSize(this.value)">
+                        ${[10, 20, 50, 100].map(size =>
+                            `<option value="${size}" ${size === podPageSize ? 'selected' : ''}>${size}</option>`
+                        ).join('')}
+                    </select>
+                    条
+                </label>
+            `;
+        }
+
+        // 修改每页条数后从第一页重新查询。
+        function changePodPageSize(value) {
+            podPageSize = Number(value) || 20;
+            loadPods(1);
         }
 
         // 根据 Pod 列表渲染管理台表格。
@@ -1019,7 +1110,7 @@
                 });
                 showToast('Pod 创建成功');
                 document.getElementById('newUserId').value = '';
-                await loadPods();
+                await loadPods(1);
             } finally {
                 showLoading(false);
             }

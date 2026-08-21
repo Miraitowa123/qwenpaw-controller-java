@@ -23,8 +23,8 @@ public class IdlePodCleanService {
     @Autowired
     private StringRedisTemplate redisTemplate;
 
-    // 每 5 分钟执行
-    @Scheduled(fixedRate = 300_000)
+    // 每天上海时间 23:00 执行
+    @Scheduled(cron = "0 0 23 * * *", zone = "Asia/Shanghai")
     public void cleanupIdlePods() {
         List<UserPodMapping> pods = podManager.listUserPods();
         log.info("[{}] 开始清理空闲 Pod，当前 Pod 总数: {}", LocalDateTime.now().format(TIME_FORMATTER), pods.size());

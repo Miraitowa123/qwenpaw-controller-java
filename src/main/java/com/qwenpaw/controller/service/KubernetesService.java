@@ -111,7 +111,13 @@ public class KubernetesService {
      * 查询指定 Pod 的业务状态。
      */
     public PodStatus getPodStatus(String podName) {
-        Pod pod = getPodByName(podName);
+        return getPodStatus(getPodByName(podName));
+    }
+
+    /**
+     * 根据已经查询到的 Pod 对象判断业务状态，避免列表场景逐个重复访问 Kubernetes API。
+     */
+    public PodStatus getPodStatus(Pod pod) {
         if (pod == null || pod.getStatus() == null) {
             return PodStatus.UNKNOWN;
         }

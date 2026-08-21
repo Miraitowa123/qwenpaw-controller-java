@@ -56,6 +56,9 @@ import java.util.Map;
 @RequestMapping("/api/v1")
 public class UserPodController {
 
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+
     /**
      * 接口访问和异常日志。
      */
@@ -194,9 +197,34 @@ public class UserPodController {
      * 列出控制器当前能发现的所有用户 Pod。
      */
     @GetMapping("/users/pods")
+    public ListUserPodsResponse listUserPods(
+            @RequestParam(value = "page", required = false) Integer page,
+            @RequestParam(value = "page_size", required = false) Integer pageSize) {
+        // 不带分页参数时保持旧接口的全量返回行为，避免影响已有调用方。
+        if (page == null && pageSize == null) {
+            List<UserPodResponse> users = toPodResponses(podManager.listUserPods());
+            return new ListUserPodsResponse(users);
+        }
+
+        int requestedPage = page == null ? 1 : page;
+        int requestedPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
+        validatePagination(requestedPage, requestedPageSize);
+
+        PodManager.UserPodPage podPage = podManager.listUserPodsPage(requestedPage, requestedPageSize);
+        List<UserPodResponse> users = toPodResponses(podPage.users());
+        return new ListUserPodsResponse(
+                users, podPage.total(), podPage.page(), podPage.pageSize());
+    }
+
+    /**
+     * 供直接调用方保留原有无参方法。
+     */
     public ListUserPodsResponse listUserPods() {
-        List<UserPodResponse> users = podManager.listUserPods()
-                .stream()
+        return listUserPods(null, null);
+    }
+
+    private List<UserPodResponse> toPodResponses(List<UserPodMapping> mappings) {
+        return mappings.stream()
                 .map(mapping -> {
                     UserPodResponse response = UserPodResponse.from(mapping);
                     AgentHeartbeatService.HeartbeatStatus heartbeat =
@@ -206,7 +234,16 @@ public class UserPodController {
                     return response;
                 })
                 .toList();
-        return new ListUserPodsResponse(users);
+    }
+
+    private void validatePagination(int page, int pageSize) {
+        if (page < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "page must be greater than or equal to 1");
+        }
+        if (pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "page_size must be between 1 and " + MAX_PAGE_SIZE);
+        }
     }
 
     /**

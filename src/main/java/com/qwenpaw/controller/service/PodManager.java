@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -107,13 +108,52 @@ public class PodManager {
      * 列出所有带有 qwenpaw app 标签和 user 标签的 Pod。
      */
     public List<UserPodMapping> listUserPods() {
+        return listUserPodResources().stream()
+                .map(this::mappingFromPod)
+                .toList();
+    }
+
+    /**
+     * 按创建时间倒序返回一页用户 Pod；页码从 1 开始。
+     */
+    public UserPodPage listUserPodsPage(int page, int pageSize) {
+        List<Pod> pods = listUserPodResources();
+        int total = pods.size();
+        long requestedOffset = (long) (page - 1) * pageSize;
+        if (requestedOffset >= total) {
+            return new UserPodPage(List.of(), total, page, pageSize);
+        }
+
+        int fromIndex = (int) requestedOffset;
+        int toIndex = Math.min(fromIndex + pageSize, total);
+        List<UserPodMapping> users = pods.subList(fromIndex, toIndex)
+                .stream()
+                .map(this::mappingFromPod)
+                .toList();
+        return new UserPodPage(users, total, page, pageSize);
+    }
+
+    /**
+     * 查询并稳定排序用户 Pod 资源，保证翻页期间顺序可预测。
+     */
+    private List<Pod> listUserPodResources() {
+        Comparator<String> descendingTimestamp = Comparator.nullsLast(Comparator.reverseOrder());
+        Comparator<String> podName = Comparator.nullsLast(Comparator.naturalOrder());
         return kubernetesService.listPodsByLabel(Map.of("app", properties.getQwenpawAppLabel()))
                 .stream()
                 .filter(pod -> pod.getMetadata() != null
                         && pod.getMetadata().getLabels() != null
                         && pod.getMetadata().getLabels().containsKey("user"))
-                .map(this::mappingFromPod)
+                .sorted(Comparator
+                        .comparing((Pod pod) -> pod.getMetadata().getCreationTimestamp(), descendingTimestamp)
+                        .thenComparing(pod -> pod.getMetadata().getName(), podName))
                 .toList();
+    }
+
+    /**
+     * 用户 Pod 分页结果。
+     */
+    public record UserPodPage(List<UserPodMapping> users, int total, int page, int pageSize) {
     }
 
     /**
@@ -266,7 +306,7 @@ public class PodManager {
         String userId = pod.getMetadata().getLabels().get("user");
         UserPodMapping mapping = newMapping(userId);
         mapping.setPodName(pod.getMetadata().getName());
-        mapping.setStatus(kubernetesService.getPodStatus(pod.getMetadata().getName()));
+        mapping.setStatus(kubernetesService.getPodStatus(pod));
         if (pod.getMetadata().getCreationTimestamp() != null) {
             mapping.setCreatedAt(OffsetDateTime.parse(pod.getMetadata().getCreationTimestamp()));
         }
