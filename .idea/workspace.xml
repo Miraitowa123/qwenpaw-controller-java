@@ -4,16 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加分页查询">
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加查询用户中心">
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/AgentHeartbeatServiceTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/KubernetesLeaseLockTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/KubernetesServiceConcurrencyTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/PodManagerTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/UserCenterEndpointResolverTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/UserProfileCacheServiceTest.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/web/UserPodControllerTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/update_skill_management.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/update_skill_management.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/config/QwenPawProperties.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/model/UserPodResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,7 +153,7 @@
       <workItem from="1784185287634" duration="872000" />
       <workItem from="1784787377952" duration="94000" />
       <workItem from="1784792791752" duration="11850000" />
-      <workItem from="1785472286157" duration="107032000" />
+      <workItem from="1785472286157" duration="109118000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -340,7 +339,15 @@
       <option name="project" value="LOCAL" />
       <updated>1787292764193</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="1、添加查询用户中心">
+      <option name="closed" value="true" />
+      <created>1787625234991</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1787625234991</updated>
+    </task>
+    <option name="localTasksCounter" value="25" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -378,7 +385,8 @@
     <MESSAGE value="1、redis配置" />
     <MESSAGE value="1、添加查询redis数据倒计时" />
     <MESSAGE value="1、添加分页查询" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、添加分页查询" />
+    <MESSAGE value="1、添加查询用户中心" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、添加查询用户中心" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
