@@ -125,6 +125,32 @@
         }
         tr:hover { background: #fafafa; }
         #podTableContainer { overflow-x: auto; }
+        .pod-table {
+            min-width: 100%;
+        }
+        .pod-table th:not(.operation-column),
+        .pod-table td:not(.operation-column) {
+            max-width: 220px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pod-table .operation-column {
+            position: sticky;
+            right: 0;
+            min-width: 338px;
+            white-space: nowrap;
+            background: #fff;
+            box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.18);
+            z-index: 1;
+        }
+        .pod-table th.operation-column {
+            background: #fafafa;
+            z-index: 2;
+        }
+        .pod-table tr:hover td.operation-column {
+            background: #fafafa;
+        }
         .pod-pagination {
             display: flex;
             align-items: center;
@@ -1054,7 +1080,7 @@
                         <td>${formatDate(pod.created_at)}</td>
                         <td>${renderLastUsed(pod)}</td>
                         <td>${renderHeartbeatRemaining(pod)}</td>
-                        <td>
+                        <td class="operation-column">
                             <div class="actions">
                                 <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
                                 <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
@@ -1075,7 +1101,7 @@
             }).join('');
 
             container.innerHTML = `
-                <table>
+                <table class="pod-table">
                     <thead>
                         <tr>
                             <th>User ID</th>
@@ -1088,7 +1114,7 @@
                             <th>创建时间</th>
                             <th>最新使用时间</th>
                             <th>72h 剩余时间</th>
-                            <th>操作</th>
+                            <th class="operation-column">操作</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
