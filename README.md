@@ -98,6 +98,7 @@ kubectl apply -f deployments/k8s.yaml
 | CONTROLLER_CONFIGMAP_NAME | `qwenpaw-controller-config`           | Controller ConfigMap |
 | CONTROLLER_DEPLOYMENT_NAME | `qwenpaw-controller`                  | Controller Deployment |
 | POD_READY_TIMEOUT | `600`                                 | 等待用户 Pod Ready 的超时时间，单位秒 |
+| USER_CENTER_TIMEOUT_SECONDS | `10`                                  | 创建 Pod 时查询用户中心的超时时间，单位秒 |
 | STARTUP_SYNC_ENABLED | `false`                               | 启动时是否立即同步 Kubernetes Pod；集群部署清单中设为 `true` |
 
 ## 项目结构

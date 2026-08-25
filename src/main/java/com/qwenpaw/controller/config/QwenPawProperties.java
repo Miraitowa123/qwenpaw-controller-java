@@ -169,6 +169,11 @@ public class QwenPawProperties {
     private int personalApiKeyTimeoutSeconds = 20;
 
     /**
+     * 调用用户中心查询用户信息接口的超时秒数。
+     */
+    private int userCenterTimeoutSeconds = 10;
+
+    /**
      * personal-api-key.json 在 working.secret 目录下的相对路径。
      */
     private String personalApiKeyFileRelativePath = "providers/custom/personal-api-key.json";
@@ -619,6 +624,20 @@ public class QwenPawProperties {
      */
     public void setPersonalApiKeyTimeoutSeconds(int personalApiKeyTimeoutSeconds) {
         this.personalApiKeyTimeoutSeconds = personalApiKeyTimeoutSeconds;
+    }
+
+    /**
+     * 获取用户中心接口超时秒数。
+     */
+    public int getUserCenterTimeoutSeconds() {
+        return userCenterTimeoutSeconds;
+    }
+
+    /**
+     * 设置用户中心接口超时秒数。
+     */
+    public void setUserCenterTimeoutSeconds(int userCenterTimeoutSeconds) {
+        this.userCenterTimeoutSeconds = userCenterTimeoutSeconds;
     }
 
     /**

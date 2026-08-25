@@ -12,6 +12,7 @@ import com.qwenpaw.controller.model.TemplateSyncResult;
 import com.qwenpaw.controller.model.UserPodMapping;
 import com.qwenpaw.controller.model.UserPodResponse;
 import com.qwenpaw.controller.model.UserPersonalApiKeyResponse;
+import com.qwenpaw.controller.model.UserProfile;
 import com.qwenpaw.controller.service.KubernetesService;
 import com.qwenpaw.controller.service.AgentHeartbeatService;
 import com.qwenpaw.controller.service.PersonalApiKeyFileService;
@@ -19,6 +20,7 @@ import com.qwenpaw.controller.service.PersonalDataSyncService;
 import com.qwenpaw.controller.service.PodManager;
 import com.qwenpaw.controller.service.SkillDownloadService;
 import com.qwenpaw.controller.service.SkillDownloadService.SkillArchive;
+import com.qwenpaw.controller.service.UserProfileCacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -100,6 +102,11 @@ public class UserPodController {
     private final AgentHeartbeatService agentHeartbeatService;
 
     /**
+     * 批量读取管理台用户姓名和登录名的 Redis 缓存。
+     */
+    private final UserProfileCacheService userProfileCacheService;
+
+    /**
      * 注入 Pod 编排、Kubernetes 操作和配置对象。
      */
     public UserPodController(PodManager podManager,
@@ -108,7 +115,8 @@ public class UserPodController {
                              PersonalApiKeyFileService personalApiKeyFileService,
                              PersonalDataSyncService personalDataSyncService,
                              QwenPawProperties properties,
-                             AgentHeartbeatService agentHeartbeatService) {
+                             AgentHeartbeatService agentHeartbeatService,
+                             UserProfileCacheService userProfileCacheService) {
         this.podManager = podManager;
         this.kubernetesService = kubernetesService;
         this.skillDownloadService = skillDownloadService;
@@ -116,6 +124,7 @@ public class UserPodController {
         this.personalDataSyncService = personalDataSyncService;
         this.properties = properties;
         this.agentHeartbeatService = agentHeartbeatService;
+        this.userProfileCacheService = userProfileCacheService;
     }
 
     /**
@@ -224,9 +233,16 @@ public class UserPodController {
     }
 
     private List<UserPodResponse> toPodResponses(List<UserPodMapping> mappings) {
+        Map<String, UserProfile> profiles = userProfileCacheService.getCachedProfiles(
+                mappings.stream().map(UserPodMapping::getUserId).toList());
         return mappings.stream()
                 .map(mapping -> {
                     UserPodResponse response = UserPodResponse.from(mapping);
+                    UserProfile profile = profiles.get(mapping.getUserId());
+                    if (profile != null) {
+                        response.setUserName(profile.userName());
+                        response.setLoginName(profile.loginName());
+                    }
                     AgentHeartbeatService.HeartbeatStatus heartbeat =
                             agentHeartbeatService.getStatus(mapping.getUserId());
                     response.setLastAccess(heartbeat.lastAccess());

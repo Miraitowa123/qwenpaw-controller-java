@@ -107,6 +107,7 @@ qwenpaw:
   startup-sync-enabled: ${STARTUP_SYNC_ENABLED:false}
   personal-api-key-jumpcloud-env: ${PERSONAL_API_KEY_JUMPCLOUD_ENV:BASE}
   personal-api-key-timeout-seconds: ${PERSONAL_API_KEY_TIMEOUT_SECONDS:20}
+  user-center-timeout-seconds: ${USER_CENTER_TIMEOUT_SECONDS:10}
   personal-api-key-file-relative-path: ${PERSONAL_API_KEY_FILE_RELATIVE_PATH:providers/custom/personal-api-key.json}
 
 file:

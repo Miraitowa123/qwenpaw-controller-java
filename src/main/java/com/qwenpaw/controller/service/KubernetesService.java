@@ -88,6 +88,11 @@ public class KubernetesService {
     private final EllmEndpointResolver ellmEndpointResolver;
 
     /**
+     * 创建用户 Pod 时按需写入用户展示信息缓存。
+     */
+    private final UserProfileCacheService userProfileCacheService;
+
+    /**
      * 同一用户创建流程的 Kubernetes 分布式锁，支持 Controller 多副本。
      */
     private final KubernetesLeaseLock provisioningLock;
@@ -99,11 +104,13 @@ public class KubernetesService {
                              QwenPawProperties properties,
                              PersonalApiKeyService personalApiKeyService,
                              EllmEndpointResolver ellmEndpointResolver,
+                             UserProfileCacheService userProfileCacheService,
                              KubernetesLeaseLock provisioningLock) {
         this.client = client;
         this.properties = properties;
         this.personalApiKeyService = personalApiKeyService;
         this.ellmEndpointResolver = ellmEndpointResolver;
+        this.userProfileCacheService = userProfileCacheService;
         this.provisioningLock = provisioningLock;
     }
 
@@ -206,6 +213,8 @@ public class KubernetesService {
         }
 
         Map<String, String> labels = managedLabels(userId);
+        // 已处于同一用户的跨 Pod Lease 内；缓存命中时不会访问用户中心。
+        userProfileCacheService.cacheIfAbsent(userId);
         // initVolumeMounts 只给 initContainer 用，先准备模板和用户目录。
         List<VolumeMount> initVolumeMounts = initVolumeMounts(userId);
         // qwenpawVolumeMounts 给主业务容器用，决定 /app/working 等路径来自哪里。

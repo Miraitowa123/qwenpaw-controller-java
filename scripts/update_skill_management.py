@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Add or update the skill management entry in every user's skill.json.
+"""Add or update managed skill entries in every user's skill.json.
 
 The script walks the controller-mounted personalData directory, skips the
 public template directory, and updates:
 
     <userId>/working/workspaces/default/skill.json
 
-It inserts or replaces skills["技能管理"]. Other JSON values are preserved.
+It inserts or replaces skills["技能管理"] and skills["wps_sync"]. Other JSON
+values are preserved.
 
 Default mode is dry-run. Add --apply to write files.
 """
@@ -27,29 +28,60 @@ from pathlib import Path
 from typing import Any
 
 
-TARGET_SKILL_NAME = "技能管理"
-TARGET_SKILL: dict[str, Any] = {
-    "enabled": True,
-    "channels": ["all"],
-    "source": "customized",
-    "metadata": {
-        "name": "技能管理",
-        "description": "技能发布、查询、安装管理技能。支持发布技能、查询技能列表和详情、下载安装技能等操作。",
-        "version_text": "",
-        "commit_text": "",
+TARGET_SKILLS: dict[str, dict[str, Any]] = {
+    "技能管理": {
+        "enabled": True,
+        "channels": ["all"],
         "source": "customized",
-        "protected": False,
+        "metadata": {
+            "name": "技能管理",
+            "description": "技能发布、查询、安装管理技能。支持发布技能、查询技能列表和详情、下载安装技能等操作。",
+            "version_text": "",
+            "commit_text": "",
+            "source": "customized",
+            "protected": False,
+            "requirements": {
+                "require_bins": ["requests"],
+                "require_envs": [],
+            },
+            "updated_at": "2026-08-19T08:21:04.939367Z",
+        },
         "requirements": {
             "require_bins": ["requests"],
             "require_envs": [],
         },
         "updated_at": "2026-08-19T08:21:04.939367Z",
     },
-    "requirements": {
-        "require_bins": ["requests"],
-        "require_envs": [],
+    "wps_sync": {
+        "enabled": True,
+        "channels": ["all"],
+        "source": "customized",
+        "metadata": {
+            "name": "wps_sync",
+            "description": (
+                "Use this skill when the user wants you to read WPS cloud documents "
+                "(WPS 云文档/云盘) to answer questions, or to browse / search / sync "
+                "files in WPS cloud drive. Provides two flows: (1) browse the cloud "
+                "directory tree and sync a chosen file, (2) search files by keyword "
+                "and sync the chosen file.Identity is auto-read from env. Sync "
+                "directly when the target is found."
+            ),
+            "version_text": "",
+            "commit_text": "",
+            "source": "customized",
+            "protected": False,
+            "requirements": {
+                "require_bins": [],
+                "require_envs": [],
+            },
+            "updated_at": "2026-08-21T05:47:26.883357Z",
+        },
+        "requirements": {
+            "require_bins": [],
+            "require_envs": [],
+        },
+        "updated_at": "2026-08-21T05:47:26.883357Z",
     },
-    "updated_at": "2026-08-19T08:21:04.939367Z",
 }
 
 
@@ -66,7 +98,7 @@ class JsonProperty:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description='Add or update skills["技能管理"] in user skill.json files.'
+        description='Add or update skills["技能管理"] and skills["wps_sync"] in user skill.json files.'
     )
     parser.add_argument(
         "--personal-data-root",
@@ -166,29 +198,38 @@ def patch_skill_text(text: str) -> tuple[str, bool]:
     if not isinstance(original_skills, dict):
         raise ValueError("skills must be an object")
 
-    skill_props = parse_object_properties(skills_text)
-    target_prop = require_unique_key(skill_props, TARGET_SKILL_NAME, required=False)
-    if target_prop is not None and original_skills.get(TARGET_SKILL_NAME) == TARGET_SKILL:
-        return text, False
-
     newline = "\r\n" if "\r\n" in text else "\n"
-    if target_prop is None:
-        updated_skills_text = insert_object_property(
-            skills_text,
-            skill_props,
-            TARGET_SKILL_NAME,
-            TARGET_SKILL,
-            skills_prop.key_indent,
-            newline,
-        )
-    else:
-        value_indent = target_prop.key_indent or skills_prop.key_indent + "  "
-        replacement = format_json_value(TARGET_SKILL, value_indent, newline)
-        updated_skills_text = (
-            skills_text[: target_prop.value_start]
-            + replacement
-            + skills_text[target_prop.value_end :]
-        )
+    updated_skills_text = skills_text
+    changed = False
+
+    for target_name, target_skill in TARGET_SKILLS.items():
+        current_skills = json.loads(updated_skills_text)
+        skill_props = parse_object_properties(updated_skills_text)
+        target_prop = require_unique_key(skill_props, target_name, required=False)
+        if target_prop is not None and current_skills.get(target_name) == target_skill:
+            continue
+
+        changed = True
+        if target_prop is None:
+            updated_skills_text = insert_object_property(
+                updated_skills_text,
+                skill_props,
+                target_name,
+                target_skill,
+                skills_prop.key_indent,
+                newline,
+            )
+        else:
+            value_indent = target_prop.key_indent or skills_prop.key_indent + "  "
+            replacement = format_json_value(target_skill, value_indent, newline)
+            updated_skills_text = (
+                updated_skills_text[: target_prop.value_start]
+                + replacement
+                + updated_skills_text[target_prop.value_end :]
+            )
+
+    if not changed:
+        return text, False
 
     updated_text = (
         text[: skills_prop.value_start]
@@ -198,11 +239,12 @@ def patch_skill_text(text: str) -> tuple[str, bool]:
     updated_json = json.loads(updated_text)
 
     expected_json = copy.deepcopy(original_json)
-    expected_json["skills"][TARGET_SKILL_NAME] = TARGET_SKILL
+    expected_json["skills"].update(TARGET_SKILLS)
     if updated_json != expected_json:
-        raise RuntimeError("safety check failed: fields other than skills['技能管理'] changed")
-    if updated_json["skills"].get(TARGET_SKILL_NAME) != TARGET_SKILL:
-        raise RuntimeError("safety check failed: skills['技能管理'] was not updated")
+        raise RuntimeError("safety check failed: fields other than managed skill entries changed")
+    for target_name, target_skill in TARGET_SKILLS.items():
+        if updated_json["skills"].get(target_name) != target_skill:
+            raise RuntimeError(f"safety check failed: skills[{target_name!r}] was not updated")
 
     return updated_text, True
 

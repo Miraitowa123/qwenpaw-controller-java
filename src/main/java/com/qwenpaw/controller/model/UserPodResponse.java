@@ -13,6 +13,16 @@ public class UserPodResponse {
     private String userId;
 
     /**
+     * 用户中心返回的用户姓名；仅用于管理台展示。
+     */
+    private String userName;
+
+    /**
+     * 用户中心返回的登录名；仅用于管理台展示。
+     */
+    private String loginName;
+
+    /**
      * 当前实际运行的 Pod 名称；重启后通常会变化。
      */
     private String podName;
@@ -102,6 +112,34 @@ public class UserPodResponse {
      */
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    /**
+     * 获取用户姓名。
+     */
+    public String getUserName() {
+        return userName;
+    }
+
+    /**
+     * 设置用户姓名。
+     */
+    public void setUserName(String userName) {
+        this.userName = userName;
+    }
+
+    /**
+     * 获取登录名。
+     */
+    public String getLoginName() {
+        return loginName;
+    }
+
+    /**
+     * 设置登录名。
+     */
+    public void setLoginName(String loginName) {
+        this.loginName = loginName;
     }
 
     /**

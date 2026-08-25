@@ -1037,12 +1037,16 @@
             // rows 是表格 tbody 的 HTML 字符串。
             const rows = pods.map(pod => {
                 const userId = escapeHtml(pod.user_id);
+                const userName = escapeHtml(pod.user_name) || '-';
+                const loginName = escapeHtml(pod.login_name) || '-';
                 const podName = escapeHtml(pod.pod_name);
                 const deploymentName = escapeHtml(pod.deployment_name);
                 const serviceName = escapeHtml(pod.service_name);
                 return `
                     <tr>
                         <td>${userId}</td>
+                        <td>${userName}</td>
+                        <td>${loginName}</td>
                         <td>${podName}</td>
                         <td><span class="status ${getStatusClass(pod.status)}">${escapeHtml(pod.status)}</span></td>
                         <td>${deploymentName}</td>
@@ -1075,6 +1079,8 @@
                     <thead>
                         <tr>
                             <th>User ID</th>
+                            <th>User Name</th>
+                            <th>Login Name</th>
                             <th>Pod 名称</th>
                             <th>状态</th>
                             <th>Deployment</th>
