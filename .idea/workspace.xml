@@ -4,15 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加查询用户中心">
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/AgentHeartbeatServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/KubernetesLeaseLockTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/KubernetesServiceConcurrencyTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/PodManagerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/UserCenterEndpointResolverTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/UserProfileCacheServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/web/UserPodControllerTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、修改ui">
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PodManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/PodManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/web/UserPodController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/PodManagerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/service/PodManagerTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/web/UserPodControllerTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/com/qwenpaw/controller/web/UserPodControllerTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -154,6 +151,7 @@
       <workItem from="1784787377952" duration="94000" />
       <workItem from="1784792791752" duration="11850000" />
       <workItem from="1785472286157" duration="109118000" />
+      <workItem from="1787627186205" duration="10134000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -347,7 +345,23 @@
       <option name="project" value="LOCAL" />
       <updated>1787625234991</updated>
     </task>
-    <option name="localTasksCounter" value="25" />
+    <task id="LOCAL-00025" summary="1、添加查询用户中心">
+      <option name="closed" value="true" />
+      <created>1787627567497</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1787627567497</updated>
+    </task>
+    <task id="LOCAL-00026" summary="1、修改ui">
+      <option name="closed" value="true" />
+      <created>1787640894066</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1787640894066</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -386,7 +400,8 @@
     <MESSAGE value="1、添加查询redis数据倒计时" />
     <MESSAGE value="1、添加分页查询" />
     <MESSAGE value="1、添加查询用户中心" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、添加查询用户中心" />
+    <MESSAGE value="1、修改ui" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、修改ui" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />

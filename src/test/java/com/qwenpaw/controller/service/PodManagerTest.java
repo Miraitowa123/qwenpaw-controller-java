@@ -95,6 +95,22 @@ class PodManagerTest {
         verify(kubernetesService, never()).getPodStatus(alice);
     }
 
+    @Test
+    void filtersPodsByExactUserIdBeforePagination() {
+        Pod alice = pod("alice", "qwenpaw-alice-abc", "2026-08-18T06:00:00Z");
+        Pod aliceTwo = pod("alice-two", "qwenpaw-alice-two-abc", "2026-08-19T06:00:00Z");
+        when(kubernetesService.listPodsByLabel(Map.of("app", "qwenpaw", "user", "alice")))
+                .thenReturn(List.of(alice, aliceTwo));
+        when(kubernetesService.getPodStatus(alice)).thenReturn(PodStatus.RUNNING);
+
+        PodManager.UserPodPage page = podManager.listUserPodsPage("alice", 1, 20);
+
+        assertThat(page.total()).isEqualTo(1);
+        assertThat(page.users()).extracting(UserPodMapping::getUserId).containsExactly("alice");
+        verify(kubernetesService).listPodsByLabel(Map.of("app", "qwenpaw", "user", "alice"));
+        verify(kubernetesService, never()).getPodStatus(aliceTwo);
+    }
+
     private Deployment deployment(String name) {
         return new DeploymentBuilder()
                 .withNewMetadata()

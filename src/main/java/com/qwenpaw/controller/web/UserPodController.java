@@ -207,11 +207,16 @@ public class UserPodController {
      */
     @GetMapping("/users/pods")
     public ListUserPodsResponse listUserPods(
+            @RequestParam(value = "user_id", required = false) String userId,
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "page_size", required = false) Integer pageSize) {
+        String normalizedUserId = normalizeOptionalUserId(userId == null ? null : userId.trim());
         // 不带分页参数时保持旧接口的全量返回行为，避免影响已有调用方。
         if (page == null && pageSize == null) {
-            List<UserPodResponse> users = toPodResponses(podManager.listUserPods());
+            List<UserPodMapping> mappings = normalizedUserId == null
+                    ? podManager.listUserPods()
+                    : podManager.listUserPods(normalizedUserId);
+            List<UserPodResponse> users = toPodResponses(mappings);
             return new ListUserPodsResponse(users);
         }
 
@@ -219,7 +224,9 @@ public class UserPodController {
         int requestedPageSize = pageSize == null ? DEFAULT_PAGE_SIZE : pageSize;
         validatePagination(requestedPage, requestedPageSize);
 
-        PodManager.UserPodPage podPage = podManager.listUserPodsPage(requestedPage, requestedPageSize);
+        PodManager.UserPodPage podPage = normalizedUserId == null
+                ? podManager.listUserPodsPage(requestedPage, requestedPageSize)
+                : podManager.listUserPodsPage(normalizedUserId, requestedPage, requestedPageSize);
         List<UserPodResponse> users = toPodResponses(podPage.users());
         return new ListUserPodsResponse(
                 users, podPage.total(), podPage.page(), podPage.pageSize());
@@ -229,7 +236,14 @@ public class UserPodController {
      * 供直接调用方保留原有无参方法。
      */
     public ListUserPodsResponse listUserPods() {
-        return listUserPods(null, null);
+        return listUserPods(null, null, null);
+    }
+
+    /**
+     * 供直接调用方保留原有分页方法签名。
+     */
+    public ListUserPodsResponse listUserPods(Integer page, Integer pageSize) {
+        return listUserPods(null, page, pageSize);
     }
 
     private List<UserPodResponse> toPodResponses(List<UserPodMapping> mappings) {

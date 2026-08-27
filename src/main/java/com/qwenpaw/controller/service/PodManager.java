@@ -108,7 +108,14 @@ public class PodManager {
      * 列出所有带有 qwenpaw app 标签和 user 标签的 Pod。
      */
     public List<UserPodMapping> listUserPods() {
-        return listUserPodResources().stream()
+        return listUserPods(null);
+    }
+
+    /**
+     * 按用户 ID 精确筛选 Pod；用户 ID 为空时返回全部用户 Pod。
+     */
+    public List<UserPodMapping> listUserPods(String userId) {
+        return listUserPodResources(userId).stream()
                 .map(this::mappingFromPod)
                 .toList();
     }
@@ -117,7 +124,14 @@ public class PodManager {
      * 按创建时间倒序返回一页用户 Pod；页码从 1 开始。
      */
     public UserPodPage listUserPodsPage(int page, int pageSize) {
-        List<Pod> pods = listUserPodResources();
+        return listUserPodsPage(null, page, pageSize);
+    }
+
+    /**
+     * 按用户 ID 精确筛选并分页；用户 ID 为空时保持原有全量分页行为。
+     */
+    public UserPodPage listUserPodsPage(String userId, int page, int pageSize) {
+        List<Pod> pods = listUserPodResources(userId);
         int total = pods.size();
         long requestedOffset = (long) (page - 1) * pageSize;
         if (requestedOffset >= total) {
@@ -136,14 +150,19 @@ public class PodManager {
     /**
      * 查询并稳定排序用户 Pod 资源，保证翻页期间顺序可预测。
      */
-    private List<Pod> listUserPodResources() {
+    private List<Pod> listUserPodResources(String userId) {
         Comparator<String> descendingTimestamp = Comparator.nullsLast(Comparator.reverseOrder());
         Comparator<String> podName = Comparator.nullsLast(Comparator.naturalOrder());
-        return kubernetesService.listPodsByLabel(Map.of("app", properties.getQwenpawAppLabel()))
+        Map<String, String> labels = userId == null || userId.isBlank()
+                ? Map.of("app", properties.getQwenpawAppLabel())
+                : Map.of("app", properties.getQwenpawAppLabel(), "user", userId);
+        return kubernetesService.listPodsByLabel(labels)
                 .stream()
                 .filter(pod -> pod.getMetadata() != null
                         && pod.getMetadata().getLabels() != null
-                        && pod.getMetadata().getLabels().containsKey("user"))
+                        && pod.getMetadata().getLabels().containsKey("user")
+                        && (userId == null || userId.isBlank()
+                        || userId.equals(pod.getMetadata().getLabels().get("user"))))
                 .sorted(Comparator
                         .comparing((Pod pod) -> pod.getMetadata().getCreationTimestamp(), descendingTimestamp)
                         .thenComparing(pod -> pod.getMetadata().getName(), podName))

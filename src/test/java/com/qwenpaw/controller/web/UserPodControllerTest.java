@@ -146,6 +146,22 @@ class UserPodControllerTest {
     }
 
     @Test
+    void searchesPaginatedPodsByNormalizedUserId() {
+        UserPodMapping alice = mapping(PodStatus.RUNNING);
+        when(podManager.listUserPodsPage("alice", 1, 20))
+                .thenReturn(new PodManager.UserPodPage(List.of(alice), 1, 1, 20));
+        when(agentHeartbeatService.getStatus("alice"))
+                .thenReturn(AgentHeartbeatService.HeartbeatStatus.empty());
+
+        ListUserPodsResponse response = controller.listUserPods(" Alice ", 1, 20);
+
+        assertThat(response.getUsers()).hasSize(1);
+        assertThat(response.getTotal()).isEqualTo(1);
+        verify(podManager).listUserPodsPage("alice", 1, 20);
+        verify(podManager, never()).listUserPodsPage(1, 20);
+    }
+
+    @Test
     void rejectsInvalidPaginationParameters() {
         assertThatThrownBy(() -> controller.listUserPods(0, 20))
                 .isInstanceOf(ResponseStatusException.class)

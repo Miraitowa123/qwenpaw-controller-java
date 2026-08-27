@@ -107,6 +107,23 @@
             margin-bottom: 16px;
         }
         .card-title-row .card-title { margin-bottom: 0; }
+        .pod-list-tools {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        .pod-list-tools input {
+            width: 240px;
+            padding: 7px 10px;
+            border: 1px solid #d9d9d9;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .pod-list-tools input:focus {
+            outline: none;
+            border-color: #40a9ff;
+        }
         .pod-count { color: #666; font-size: 13px; }
         table {
             width: 100%;
@@ -141,7 +158,8 @@
             min-width: 338px;
             white-space: nowrap;
             background: #fff;
-            box-shadow: -8px 0 8px -8px rgba(0, 0, 0, 0.18);
+            border-left: 1px solid #e8e8e8;
+            box-shadow: -8px 0 12px -6px rgba(0, 0, 0, 0.28);
             z-index: 1;
         }
         .pod-table th.operation-column {
@@ -150,6 +168,9 @@
         }
         .pod-table tr:hover td.operation-column {
             background: #fafafa;
+        }
+        .pod-table td.operation-column.menu-open {
+            z-index: 30;
         }
         .pod-pagination {
             display: flex;
@@ -216,9 +237,9 @@
         }
         .action-menu-panel {
             display: none;
-            position: absolute;
-            right: 0;
-            top: calc(100% + 6px);
+            position: fixed;
+            left: 0;
+            top: 0;
             min-width: 120px;
             padding: 4px;
             background: #fff;
@@ -608,6 +629,20 @@
             padding: 12px 4px;
         }
         @media (max-width: 960px) {
+            .card-title-row {
+                align-items: flex-start;
+                flex-wrap: wrap;
+            }
+            .pod-list-tools {
+                order: 3;
+                width: 100%;
+                margin-left: 0;
+            }
+            .pod-list-tools input {
+                flex: 1;
+                width: auto;
+                min-width: 0;
+            }
             .sync-grid {
                 grid-template-columns: 1fr;
             }
@@ -653,6 +688,12 @@
         <div class="card">
             <div class="card-title-row">
                 <div class="card-title">Pod 列表</div>
+                <div class="pod-list-tools">
+                    <input type="text" id="podSearchUserId" placeholder="输入 User ID 精确搜索 Pod"
+                           aria-label="按 User ID 搜索 Pod">
+                    <button class="btn btn-primary" onclick="searchPods()">搜索</button>
+                    <button class="btn btn-default" onclick="clearPodSearch()">清空</button>
+                </div>
                 <div class="pod-count" id="podTotalCount">共 0 个 Pod</div>
             </div>
             <div id="podTableContainer">
@@ -852,6 +893,7 @@
         let currentPodPage = 1;
         let podPageSize = 20;
         let podTotalPages = 0;
+        let currentPodUserId = '';
 
         // 当前浏览器终端连接使用的 WebSocket。
         let terminalSocket = null;
@@ -989,6 +1031,9 @@
                     page: String(requestedPage),
                     page_size: String(podPageSize)
                 });
+                if (currentPodUserId) {
+                    params.set('user_id', currentPodUserId);
+                }
                 const data = await apiRequest(`${API_BASE}/users/pods?${params}`);
                 podTotalPages = Number(data.total_pages) || 0;
                 if (podTotalPages > 0 && requestedPage > podTotalPages) {
@@ -1008,7 +1053,9 @@
             const total = Number(data.total) || 0;
             const totalPages = Number(data.total_pages) || 0;
             const pagination = document.getElementById('podPagination');
-            document.getElementById('podTotalCount').textContent = `共 ${total} 个 Pod`;
+            document.getElementById('podTotalCount').textContent = currentPodUserId
+                ? `搜索结果：${total} 个 Pod`
+                : `共 ${total} 个 Pod`;
             if (total === 0) {
                 pagination.style.display = 'none';
                 pagination.innerHTML = '';
@@ -1040,6 +1087,66 @@
             loadPods(1);
         }
 
+        // 使用完整 User ID 精确搜索 Pod，并从第一页展示结果。
+        function searchPods() {
+            currentPodUserId = document.getElementById('podSearchUserId').value.trim();
+            loadPods(1);
+        }
+
+        // 清空搜索条件并恢复完整 Pod 列表。
+        function clearPodSearch() {
+            document.getElementById('podSearchUserId').value = '';
+            currentPodUserId = '';
+            loadPods(1);
+        }
+
+        // 关闭当前展开的“更多”菜单，可保留正在重新定位的菜单。
+        function closeActionMenus(except = null) {
+            document.querySelectorAll('.action-menu[open]').forEach(menu => {
+                if (menu !== except) {
+                    menu.open = false;
+                }
+            });
+        }
+
+        // 将菜单固定到视口中，避免被表格滚动容器或后续行遮挡。
+        function positionActionMenu(menu) {
+            const panel = menu.querySelector('.action-menu-panel');
+            const operationCell = menu.closest('.operation-column');
+            operationCell?.classList.toggle('menu-open', menu.open);
+            if (!menu.open) {
+                panel.style.removeProperty('left');
+                panel.style.removeProperty('top');
+                return;
+            }
+
+            closeActionMenus(menu);
+            requestAnimationFrame(() => {
+                if (!menu.open) return;
+
+                const summaryRect = menu.querySelector('summary').getBoundingClientRect();
+                const panelWidth = panel.offsetWidth;
+                const panelHeight = panel.offsetHeight;
+                const viewportMargin = 8;
+                const gap = 6;
+
+                let left = summaryRect.right - panelWidth;
+                left = Math.max(viewportMargin, Math.min(left, window.innerWidth - panelWidth - viewportMargin));
+
+                let top = summaryRect.bottom + gap;
+                const roomBelow = window.innerHeight - top - viewportMargin;
+                const roomAbove = summaryRect.top - gap - viewportMargin;
+                if (panelHeight > roomBelow && roomAbove >= panelHeight) {
+                    top = summaryRect.top - panelHeight - gap;
+                } else {
+                    top = Math.min(top, window.innerHeight - panelHeight - viewportMargin);
+                }
+
+                panel.style.left = `${left}px`;
+                panel.style.top = `${Math.max(viewportMargin, top)}px`;
+            });
+        }
+
         // 根据 Pod 列表渲染管理台表格。
         function renderPodTable(pods) {
             const container = document.getElementById('podTableContainer');
@@ -1054,7 +1161,7 @@
                             <rect x="2" y="2" width="20" height="20" rx="5"/>
                             <path d="M2 12h20M12 2v20"/>
                         </svg>
-                        <p>暂无 Pod 数据</p>
+                        <p>${currentPodUserId ? '未找到该 User ID 对应的 Pod' : '暂无 Pod 数据'}</p>
                     </div>
                 `;
                 return;
@@ -1072,21 +1179,21 @@
                     <tr>
                         <td>${userId}</td>
                         <td>${userName}</td>
-                        <td>${loginName}</td>
                         <td>${podName}</td>
                         <td><span class="status ${getStatusClass(pod.status)}">${escapeHtml(pod.status)}</span></td>
+                        <td>${formatDate(pod.created_at)}</td>
+                        <td>${renderHeartbeatRemaining(pod)}</td>
+                        <td>${loginName}</td>
                         <td>${deploymentName}</td>
                         <td>${serviceName}</td>
-                        <td>${formatDate(pod.created_at)}</td>
                         <td>${renderLastUsed(pod)}</td>
-                        <td>${renderHeartbeatRemaining(pod)}</td>
                         <td class="operation-column">
                             <div class="actions">
                                 <button class="btn btn-success" onclick="openUserChat('${userId}')">进入</button>
                                 <button class="btn btn-primary" onclick="showDetail('${userId}')">详情</button>
                                 <button class="btn btn-default" onclick="showLogs('${userId}')">日志</button>
                                 <button class="btn btn-default" onclick="showTerminal('${userId}')">终端</button>
-                                <details class="action-menu">
+                                <details class="action-menu" ontoggle="positionActionMenu(this)">
                                     <summary class="btn btn-default">更多</summary>
                                     <div class="action-menu-panel">
                                         <button class="btn btn-warning" onclick="restartService('${userId}')">重启服务</button>
@@ -1106,14 +1213,14 @@
                         <tr>
                             <th>User ID</th>
                             <th>User Name</th>
-                            <th>Login Name</th>
                             <th>Pod 名称</th>
                             <th>状态</th>
+                            <th>创建时间</th>
+                            <th>72h 剩余时间</th>
+                            <th>Login Name</th>
                             <th>Deployment</th>
                             <th>Service</th>
-                            <th>创建时间</th>
                             <th>最新使用时间</th>
-                            <th>72h 剩余时间</th>
                             <th class="operation-column">操作</th>
                         </tr>
                     </thead>
@@ -1916,11 +2023,23 @@
 
         // 窗口大小变化时同步调整已打开终端的行列数。
         window.addEventListener('resize', () => {
+            closeActionMenus();
             if (!document.getElementById('terminalModal').classList.contains('active')) {
                 return;
             }
             fitTerminal();
             sendTerminalResize();
+        });
+        window.addEventListener('scroll', () => closeActionMenus(), true);
+        document.addEventListener('click', event => {
+            if (!event.target.closest('.action-menu')) {
+                closeActionMenus();
+            }
+        });
+        document.getElementById('podSearchUserId').addEventListener('keydown', event => {
+            if (event.key === 'Enter') {
+                searchPods();
+            }
         });
     </script>
 </body>
