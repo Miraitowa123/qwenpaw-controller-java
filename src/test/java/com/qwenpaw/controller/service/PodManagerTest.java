@@ -96,19 +96,43 @@ class PodManagerTest {
     }
 
     @Test
-    void filtersPodsByExactUserIdBeforePagination() {
-        Pod alice = pod("alice", "qwenpaw-alice-abc", "2026-08-18T06:00:00Z");
-        Pod aliceTwo = pod("alice-two", "qwenpaw-alice-two-abc", "2026-08-19T06:00:00Z");
-        when(kubernetesService.listPodsByLabel(Map.of("app", "qwenpaw", "user", "alice")))
-                .thenReturn(List.of(alice, aliceTwo));
-        when(kubernetesService.getPodStatus(alice)).thenReturn(PodStatus.RUNNING);
+    void filtersPodsByUserIdKeywordBeforePagination() {
+        Pod firstMatch = pod("2000000248", "qwenpaw-2000000248-abc", "2026-08-18T06:00:00Z");
+        Pod secondMatch = pod("3000000248", "qwenpaw-3000000248-abc", "2026-08-19T06:00:00Z");
+        Pod nonMatch = pod("2000000359", "qwenpaw-2000000359-abc", "2026-08-20T06:00:00Z");
+        when(kubernetesService.listPodsByLabel(Map.of("app", "qwenpaw", "user", "00248")))
+                .thenReturn(List.of());
+        when(kubernetesService.listPodsByLabel(Map.of("app", "qwenpaw")))
+                .thenReturn(List.of(firstMatch, secondMatch, nonMatch));
+        when(kubernetesService.getPodStatus(firstMatch)).thenReturn(PodStatus.RUNNING);
+        when(kubernetesService.getPodStatus(secondMatch)).thenReturn(PodStatus.RUNNING);
 
-        PodManager.UserPodPage page = podManager.listUserPodsPage("alice", 1, 20);
+        PodManager.UserPodPage page = podManager.listUserPodsPage("00248", 1, 20);
+
+        assertThat(page.total()).isEqualTo(2);
+        assertThat(page.users()).extracting(UserPodMapping::getUserId)
+                .containsExactly("3000000248", "2000000248");
+        verify(kubernetesService).listPodsByLabel(Map.of("app", "qwenpaw", "user", "00248"));
+        verify(kubernetesService).listPodsByLabel(Map.of("app", "qwenpaw"));
+        verify(kubernetesService, never()).getPodStatus(nonMatch);
+    }
+
+    @Test
+    void usesFastExactLabelLookupForCompleteUserId() {
+        Pod exactMatch = pod("2000000248", "qwenpaw-2000000248-abc", "2026-08-18T06:00:00Z");
+        when(kubernetesService.listPodsByLabel(Map.of(
+                "app", "qwenpaw", "user", "2000000248")))
+                .thenReturn(List.of(exactMatch));
+        when(kubernetesService.getPodStatus(exactMatch)).thenReturn(PodStatus.RUNNING);
+
+        PodManager.UserPodPage page = podManager.listUserPodsPage("2000000248", 1, 20);
 
         assertThat(page.total()).isEqualTo(1);
-        assertThat(page.users()).extracting(UserPodMapping::getUserId).containsExactly("alice");
-        verify(kubernetesService).listPodsByLabel(Map.of("app", "qwenpaw", "user", "alice"));
-        verify(kubernetesService, never()).getPodStatus(aliceTwo);
+        assertThat(page.users()).extracting(UserPodMapping::getUserId)
+                .containsExactly("2000000248");
+        verify(kubernetesService).listPodsByLabel(Map.of(
+                "app", "qwenpaw", "user", "2000000248"));
+        verify(kubernetesService, never()).listPodsByLabel(Map.of("app", "qwenpaw"));
     }
 
     private Deployment deployment(String name) {

@@ -17,6 +17,7 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -112,7 +113,7 @@ public class PodManager {
     }
 
     /**
-     * 按用户 ID 精确筛选 Pod；用户 ID 为空时返回全部用户 Pod。
+     * 按用户 ID 关键词模糊筛选 Pod；关键词为空时返回全部用户 Pod。
      */
     public List<UserPodMapping> listUserPods(String userId) {
         return listUserPodResources(userId).stream()
@@ -128,7 +129,7 @@ public class PodManager {
     }
 
     /**
-     * 按用户 ID 精确筛选并分页；用户 ID 为空时保持原有全量分页行为。
+     * 按用户 ID 关键词模糊筛选并分页；关键词为空时保持原有全量分页行为。
      */
     public UserPodPage listUserPodsPage(String userId, int page, int pageSize) {
         List<Pod> pods = listUserPodResources(userId);
@@ -150,23 +151,51 @@ public class PodManager {
     /**
      * 查询并稳定排序用户 Pod 资源，保证翻页期间顺序可预测。
      */
-    private List<Pod> listUserPodResources(String userId) {
+    private List<Pod> listUserPodResources(String userIdKeyword) {
         Comparator<String> descendingTimestamp = Comparator.nullsLast(Comparator.reverseOrder());
         Comparator<String> podName = Comparator.nullsLast(Comparator.naturalOrder());
-        Map<String, String> labels = userId == null || userId.isBlank()
-                ? Map.of("app", properties.getQwenpawAppLabel())
-                : Map.of("app", properties.getQwenpawAppLabel(), "user", userId);
-        return kubernetesService.listPodsByLabel(labels)
+        String normalizedKeyword = userIdKeyword == null || userIdKeyword.isBlank()
+                ? null
+                : userIdKeyword.trim().toLowerCase(Locale.ROOT);
+        List<Pod> pods;
+        boolean exactMatch = false;
+        if (normalizedKeyword == null) {
+            pods = kubernetesService.listPodsByLabel(Map.of("app", properties.getQwenpawAppLabel()));
+        } else {
+            pods = kubernetesService.listPodsByLabel(Map.of(
+                    "app", properties.getQwenpawAppLabel(),
+                    "user", normalizedKeyword));
+            exactMatch = pods.stream().anyMatch(pod -> hasUserId(pod, normalizedKeyword));
+            if (!exactMatch) {
+                pods = kubernetesService.listPodsByLabel(Map.of("app", properties.getQwenpawAppLabel()));
+            }
+        }
+        boolean filterByExactUserId = exactMatch;
+        return pods
                 .stream()
                 .filter(pod -> pod.getMetadata() != null
                         && pod.getMetadata().getLabels() != null
-                        && pod.getMetadata().getLabels().containsKey("user")
-                        && (userId == null || userId.isBlank()
-                        || userId.equals(pod.getMetadata().getLabels().get("user"))))
+                        && pod.getMetadata().getLabels().get("user") != null
+                        && (normalizedKeyword == null
+                        || (filterByExactUserId
+                        ? hasUserId(pod, normalizedKeyword)
+                        : pod.getMetadata().getLabels().get("user")
+                                .toLowerCase(Locale.ROOT)
+                                .contains(normalizedKeyword))))
                 .sorted(Comparator
                         .comparing((Pod pod) -> pod.getMetadata().getCreationTimestamp(), descendingTimestamp)
                         .thenComparing(pod -> pod.getMetadata().getName(), podName))
                 .toList();
+    }
+
+    /**
+     * 判断 Pod 的 user 标签是否与完整用户 ID 相等。
+     */
+    private boolean hasUserId(Pod pod, String userId) {
+        return pod != null
+                && pod.getMetadata() != null
+                && pod.getMetadata().getLabels() != null
+                && userId.equalsIgnoreCase(pod.getMetadata().getLabels().get("user"));
     }
 
     /**

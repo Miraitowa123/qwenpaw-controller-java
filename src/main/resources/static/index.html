@@ -689,7 +689,7 @@
             <div class="card-title-row">
                 <div class="card-title">Pod 列表</div>
                 <div class="pod-list-tools">
-                    <input type="text" id="podSearchUserId" placeholder="输入 User ID 精确搜索 Pod"
+                    <input type="text" id="podSearchUserId" placeholder="输入 User ID 关键词搜索 Pod"
                            aria-label="按 User ID 搜索 Pod">
                     <button class="btn btn-primary" onclick="searchPods()">搜索</button>
                     <button class="btn btn-default" onclick="clearPodSearch()">清空</button>
@@ -1087,7 +1087,7 @@
             loadPods(1);
         }
 
-        // 使用完整 User ID 精确搜索 Pod，并从第一页展示结果。
+        // 使用 User ID 关键词模糊搜索 Pod，并从第一页展示结果。
         function searchPods() {
             currentPodUserId = document.getElementById('podSearchUserId').value.trim();
             loadPods(1);
@@ -1161,7 +1161,7 @@
                             <rect x="2" y="2" width="20" height="20" rx="5"/>
                             <path d="M2 12h20M12 2v20"/>
                         </svg>
-                        <p>${currentPodUserId ? '未找到该 User ID 对应的 Pod' : '暂无 Pod 数据'}</p>
+                        <p>${currentPodUserId ? '未找到匹配该 User ID 关键词的 Pod' : '暂无 Pod 数据'}</p>
                     </div>
                 `;
                 return;
