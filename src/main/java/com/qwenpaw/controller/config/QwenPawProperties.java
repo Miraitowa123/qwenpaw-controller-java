@@ -64,6 +64,31 @@ public class QwenPawProperties {
     private String personalDataMountPath = "/qwenpaw_nas/personalData";
 
     /**
+     * 批量技能发布时同时处理的用户数量。
+     */
+    private int skillPublishConcurrency = 4;
+
+    /**
+     * 单次技能发布允许选择的最大用户数量。
+     */
+    private int skillPublishMaxUsers = 200;
+
+    /**
+     * 单个技能 ZIP 包允许的最大压缩后字节数。
+     */
+    private long skillPackageMaxSizeBytes = 50L * 1024 * 1024;
+
+    /**
+     * 单个技能 ZIP 包允许的最大解压后字节数。
+     */
+    private long skillPackageMaxExpandedSizeBytes = 256L * 1024 * 1024;
+
+    /**
+     * 单个技能 ZIP 包允许的最大条目数。
+     */
+    private int skillPackageMaxEntries = 5000;
+
+    /**
      * 用户 QwenPaw 容器 CPU request。
      */
     private String resourceRequestsCpu = "500m";
@@ -330,6 +355,46 @@ public class QwenPawProperties {
      */
     public void setPersonalDataMountPath(String personalDataMountPath) {
         this.personalDataMountPath = personalDataMountPath;
+    }
+
+    public int getSkillPublishConcurrency() {
+        return skillPublishConcurrency;
+    }
+
+    public void setSkillPublishConcurrency(int skillPublishConcurrency) {
+        this.skillPublishConcurrency = skillPublishConcurrency;
+    }
+
+    public int getSkillPublishMaxUsers() {
+        return skillPublishMaxUsers;
+    }
+
+    public void setSkillPublishMaxUsers(int skillPublishMaxUsers) {
+        this.skillPublishMaxUsers = skillPublishMaxUsers;
+    }
+
+    public long getSkillPackageMaxSizeBytes() {
+        return skillPackageMaxSizeBytes;
+    }
+
+    public void setSkillPackageMaxSizeBytes(long skillPackageMaxSizeBytes) {
+        this.skillPackageMaxSizeBytes = skillPackageMaxSizeBytes;
+    }
+
+    public long getSkillPackageMaxExpandedSizeBytes() {
+        return skillPackageMaxExpandedSizeBytes;
+    }
+
+    public void setSkillPackageMaxExpandedSizeBytes(long skillPackageMaxExpandedSizeBytes) {
+        this.skillPackageMaxExpandedSizeBytes = skillPackageMaxExpandedSizeBytes;
+    }
+
+    public int getSkillPackageMaxEntries() {
+        return skillPackageMaxEntries;
+    }
+
+    public void setSkillPackageMaxEntries(int skillPackageMaxEntries) {
+        this.skillPackageMaxEntries = skillPackageMaxEntries;
     }
 
     /**

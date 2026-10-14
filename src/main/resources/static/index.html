@@ -628,6 +628,66 @@
             font-size: 13px;
             padding: 12px 4px;
         }
+        .skill-upload-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 12px;
+            margin-bottom: 14px;
+            border: 1px solid #d9d9d9;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .skill-upload-box input[type="file"] {
+            flex: 1;
+            min-width: 260px;
+        }
+        .skill-upload-help {
+            width: 100%;
+            color: #666;
+            font-size: 12px;
+        }
+        .skill-package-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow: auto;
+            max-height: 55vh;
+        }
+        .skill-package-item {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: 8px;
+            align-items: center;
+            padding: 9px 10px;
+            border: 1px solid #e8e8e8;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+        }
+        .skill-package-name {
+            min-width: 0;
+            font-size: 13px;
+        }
+        .skill-package-name strong,
+        .skill-package-name small {
+            display: block;
+            overflow-wrap: anywhere;
+        }
+        .skill-package-name small {
+            color: #888;
+            margin-top: 2px;
+        }
+        .skill-current-badge {
+            color: #389e0d;
+            background: #f6ffed;
+            border: 1px solid #b7eb8f;
+            border-radius: 10px;
+            padding: 0 7px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
         @media (max-width: 960px) {
             .card-title-row {
                 align-items: flex-start;
@@ -673,6 +733,9 @@
             </button>
             <button class="btn btn-default" onclick="showTemplateSyncModal()">
                 <span>&#x21c4;</span> 模板同步
+            </button>
+            <button class="btn btn-default" onclick="showSkillReleaseModal()">
+                <span>&#x21e7;</span> 技能发布
             </button>
             <button class="btn btn-default" onclick="showControllerTerminal()">
                 <span>&#x2328;</span> 管理终端
@@ -840,6 +903,49 @@
                 </label>
                 <button class="btn btn-default" onclick="loadTemplateSync()">刷新</button>
                 <button class="btn btn-primary" onclick="runTemplateSync()">一键同步</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 技能发布弹窗 -->
+    <div class="modal-overlay" id="skillReleaseModal">
+        <div class="modal sync-modal">
+            <div class="modal-header">
+                <h3>技能发布</h3>
+                <button class="modal-close" onclick="closeModal('skillReleaseModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="skill-upload-box">
+                    <input type="file" id="skillPackageFile" accept=".zip,application/zip">
+                    <button class="btn btn-primary" onclick="uploadSkillPackage()">上传并更新公共模板</button>
+                    <div class="skill-upload-help">
+                        ZIP 必须只有一个顶层技能目录，并在该目录中包含 SKILL.md。上传成功后会立即更新公共模板中的同名技能。
+                    </div>
+                </div>
+                <div class="sync-meta" id="skillReleaseMeta"></div>
+                <div class="sync-grid">
+                    <div class="sync-panel">
+                        <div class="sync-panel-title">技能发布包</div>
+                        <div class="skill-package-list" id="skillReleasePackages">
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                    <div class="sync-panel">
+                        <div class="sync-panel-title">目标用户</div>
+                        <div class="sync-toolbar">
+                            <button class="btn btn-default" onclick="toggleSkillReleaseUsers(true)">全选</button>
+                            <button class="btn btn-default" onclick="toggleSkillReleaseUsers(false)">全不选</button>
+                        </div>
+                        <div class="sync-user-list" id="skillReleaseUsers">
+                            <p>加载中...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="sync-result" id="skillReleaseResult" style="display: none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" onclick="loadSkillRelease()">刷新</button>
+                <button class="btn btn-primary" onclick="runSkillPublish()">发布到选中用户</button>
             </div>
         </div>
     </div>
@@ -1550,6 +1656,191 @@
             }
         }
 
+        // 打开独立的技能发布弹窗。
+        function showSkillReleaseModal() {
+            openModal('skillReleaseModal');
+            loadSkillRelease();
+        }
+
+        // 加载技能发布包和可选用户。
+        async function loadSkillRelease(preferredPackage = null) {
+            const packagesBox = document.getElementById('skillReleasePackages');
+            const usersBox = document.getElementById('skillReleaseUsers');
+            const meta = document.getElementById('skillReleaseMeta');
+            const selected = document.querySelector('input[name="skillReleasePackage"]:checked');
+            const preferred = preferredPackage || (selected ? {
+                skillName: selected.dataset.skillName,
+                packageDigest: selected.value
+            } : null);
+            packagesBox.innerHTML = '<p>加载中...</p>';
+            usersBox.innerHTML = '<p>加载中...</p>';
+            meta.textContent = '';
+            hideSkillReleaseResult();
+            showLoading(true);
+            try {
+                const data = await apiRequest(`${API_BASE}/admin/skill-packages`);
+                currentSkillReleaseOverview = data;
+                const packages = data.packages || [];
+                const users = data.users || [];
+                meta.textContent = `可用发布包：${packages.length}；可选用户：${users.length}`;
+                packagesBox.innerHTML = packages.length
+                    ? renderSkillPackages(packages, preferred)
+                    : '<div class="sync-empty">暂无技能发布包，请先上传 ZIP</div>';
+                usersBox.innerHTML = users.length
+                    ? renderSkillReleaseUsers(users)
+                    : '<div class="sync-empty">暂无可发布用户</div>';
+            } catch (error) {
+                packagesBox.innerHTML = `<div class="sync-empty" style="color: #cf1322;">加载发布包失败：${escapeHtml(error.message)}</div>`;
+                usersBox.innerHTML = `<div class="sync-empty" style="color: #cf1322;">加载用户失败：${escapeHtml(error.message)}</div>`;
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 渲染可选择的技能包；优先选中刚上传的包，其次选中当前模板版本。
+        function renderSkillPackages(packages, preferred) {
+            let selectedIndex = packages.findIndex(item => preferred
+                && item.skill_name === preferred.skillName
+                && item.package_digest === preferred.packageDigest);
+            if (selectedIndex < 0) selectedIndex = packages.findIndex(item => item.current);
+            if (selectedIndex < 0) selectedIndex = 0;
+            return packages.map((item, index) => {
+                const digest = item.package_digest || '';
+                const uploadedAt = item.uploaded_at ? new Date(item.uploaded_at).toLocaleString('zh-CN') : '-';
+                return `
+                    <label class="skill-package-item">
+                        <input type="radio" name="skillReleasePackage"
+                               value="${escapeHtml(digest)}"
+                               data-skill-name="${escapeHtml(item.skill_name)}"
+                               ${index === selectedIndex ? 'checked' : ''}>
+                        <span class="skill-package-name">
+                            <strong>${escapeHtml(item.skill_name)}</strong>
+                            <small>${escapeHtml(digest.slice(0, 16))} · ${formatFileSize(item.size_bytes || 0)} · ${item.entry_count || 0} 项 · ${escapeHtml(uploadedAt)}</small>
+                        </span>
+                        ${item.current ? '<span class="skill-current-badge">当前模板</span>' : ''}
+                    </label>
+                `;
+            }).join('');
+        }
+
+        // 渲染技能发布目标用户。
+        function renderSkillReleaseUsers(users) {
+            return users.map(user => `
+                <label class="sync-user-item">
+                    <input type="checkbox" class="skill-release-user" value="${escapeHtml(user)}">
+                    <span>${escapeHtml(user)}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleSkillReleaseUsers(checked) {
+            document.querySelectorAll('.skill-release-user').forEach(input => {
+                input.checked = checked;
+            });
+        }
+
+        // 上传 ZIP。这里不能使用统一 JSON 请求函数，否则会写入错误的 Content-Type。
+        async function uploadSkillPackage() {
+            const fileInput = document.getElementById('skillPackageFile');
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) {
+                showToast('请选择要上传的技能 ZIP', 'error');
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith('.zip')) {
+                showToast('只支持 ZIP 文件', 'error');
+                return;
+            }
+
+            const form = new FormData();
+            form.append('file', file);
+            showLoading(true);
+            try {
+                const response = await fetch(`${API_BASE}/admin/skill-packages`, {
+                    method: 'POST',
+                    body: form
+                });
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.details || error.detail || error.error || `HTTP ${response.status}`);
+                }
+                const uploaded = await response.json();
+                fileInput.value = '';
+                showToast(`技能 ${uploaded.skill_name || ''} 上传成功，公共模板已更新`);
+                await loadSkillRelease({
+                    skillName: uploaded.skill_name,
+                    packageDigest: uploaded.package_digest
+                });
+            } catch (error) {
+                showToast(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // 并发发布选中的技能包，并展示每个用户的安装或更新结果。
+        async function runSkillPublish() {
+            const selectedPackage = document.querySelector('input[name="skillReleasePackage"]:checked');
+            const userIds = Array.from(document.querySelectorAll('.skill-release-user'))
+                .filter(input => input.checked)
+                .map(input => input.value);
+            if (!selectedPackage) {
+                showToast('请选择一个技能发布包', 'error');
+                return;
+            }
+            if (userIds.length === 0) {
+                showToast('请至少选择一个目标用户', 'error');
+                return;
+            }
+
+            const skillName = selectedPackage.dataset.skillName;
+            if (!confirm(`确定将技能 ${skillName} 发布到 ${userIds.length} 个用户吗？同名技能将被替换。`)) return;
+            showLoading(true);
+            try {
+                const result = await apiRequest(`${API_BASE}/admin/skill-publications`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        skill_name: skillName,
+                        package_digest: selectedPackage.value,
+                        user_ids: userIds
+                    })
+                });
+                showSkillPublishResult(result);
+                showToast(result.success ? '技能发布完成' : '技能发布完成但有失败用户',
+                    result.success ? 'success' : 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function showSkillPublishResult(result) {
+            const box = document.getElementById('skillReleaseResult');
+            const lines = [
+                `技能：${result.skill_name || '-'}`,
+                `安装：${result.installed_count || 0}；更新：${result.updated_count || 0}；失败：${result.failed_count || 0}`
+            ];
+            (result.results || []).forEach(item => {
+                lines.push(`- ${item.user_id || '-'} | ${item.status || '-'} | ${item.message || '-'}`);
+            });
+            box.className = `sync-result ${result.success ? 'success' : 'error'}`;
+            box.textContent = lines.join('\n');
+            box.style.display = 'block';
+        }
+
+        function hideSkillReleaseResult() {
+            const box = document.getElementById('skillReleaseResult');
+            box.style.display = 'none';
+            box.textContent = '';
+            box.className = 'sync-result';
+        }
+
+        function formatFileSize(bytes) {
+            const value = Number(bytes) || 0;
+            if (value < 1024) return `${value} B`;
+            if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+            return `${(value / 1024 / 1024).toFixed(1)} MB`;
+        }
+
         // 打开指定弹窗。
         function openModal(id) {
             document.getElementById(id).classList.add('active');
@@ -1606,6 +1897,9 @@
 
         // 当前模板同步弹窗加载到的数据。
         let currentTemplateSyncOverview = null;
+
+        // 当前技能发布弹窗加载到的数据。
+        let currentSkillReleaseOverview = null;
 
         // 加载控制器自身配置 ConfigMap。
         async function loadConfig() {

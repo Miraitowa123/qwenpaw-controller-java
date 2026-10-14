@@ -86,6 +86,11 @@ qwenpaw:
   qwenpaw-volume-mode: ${QWENPAW_VOLUME_MODE:subpath}
   qwenpaw-nas-mount-path: ${QWENPAW_NAS_MOUNT_PATH:/qwenpaw_nas}
   personal-data-mount-path: ${PERSONAL_DATA_MOUNT_PATH:/qwenpaw_nas/personalData}
+  skill-publish-concurrency: ${SKILL_PUBLISH_CONCURRENCY:4}
+  skill-publish-max-users: ${SKILL_PUBLISH_MAX_USERS:200}
+  skill-package-max-size-bytes: ${SKILL_PACKAGE_MAX_SIZE_BYTES:52428800}
+  skill-package-max-expanded-size-bytes: ${SKILL_PACKAGE_MAX_EXPANDED_SIZE_BYTES:268435456}
+  skill-package-max-entries: ${SKILL_PACKAGE_MAX_ENTRIES:5000}
   resource-requests-cpu: ${RESOURCE_REQUESTS_CPU:500m}
   resource-requests-memory: ${RESOURCE_REQUESTS_MEMORY:1Gi}
   resource-limits-cpu: ${RESOURCE_LIMITS_CPU:1}

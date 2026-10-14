@@ -33,6 +33,9 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | GET | `/bocompawAdmin/api/v1/users/{user_id}/logs` | 获取用户 Pod 日志 |
 | GET | `/bocompawAdmin/api/v1/users/pods` | 列出用户 Pod；可通过 `page`、`page_size` 分页（每页最多 100 条），不传参数时兼容原有全量返回 |
 | GET | `/bocompawAdmin/api/v1/skills/{skill_name}/download` | 下载当前用户指定技能目录 zip |
+| GET | `/bocompawAdmin/api/v1/admin/skill-packages` | 获取技能发布包和可发布用户列表 |
+| POST | `/bocompawAdmin/api/v1/admin/skill-packages` | 上传技能 ZIP，并更新公共模板中的已解压技能 |
+| POST | `/bocompawAdmin/api/v1/admin/skill-publications` | 将指定技能包并发发布到选中的用户 |
 | POST | `/bocompawAdmin/api/v1/admin/sync` | 同步用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |
 | GET | `/bocompawAdmin/api/v1/admin/template-sync` | 获取模板树和可同步用户列表 |
@@ -92,6 +95,11 @@ kubectl apply -f deployments/k8s.yaml
 | QWENPAW_PUBLIC_TEMPLATE_SUB_PATH | `public-secret`                       | 用户 Pod 初始化模板目录，位于用户数据 PVC 内 |
 | QWENPAW_VOLUME_MODE | `subpath`                             | PVC 挂载模式；`subpath` 隔离用户目录，`single-mount` 用于 Docker Desktop 本地调试 |
 | QWENPAW_NAS_MOUNT_PATH | `/qwenpaw_nas`                        | `single-mount` 模式下容器内 NAS 根目录 |
+| SKILL_PUBLISH_CONCURRENCY | `4` | 技能批量发布的并发用户数 |
+| SKILL_PUBLISH_MAX_USERS | `200` | 单次技能发布允许选择的最大用户数 |
+| SKILL_PACKAGE_MAX_SIZE_BYTES | `52428800` | 技能 ZIP 最大压缩后字节数 |
+| SKILL_PACKAGE_MAX_EXPANDED_SIZE_BYTES | `268435456` | 技能 ZIP 最大解压后字节数 |
+| SKILL_PACKAGE_MAX_ENTRIES | `5000` | 技能 ZIP 最大条目数 |
 | GATEWAY_NAME | `traefik-gateway`                     | Gateway 名称 |
 | GATEWAY_NAMESPACE | `ai`                                  | Gateway 命名空间 |
 | BASE_PATH_PREFIX | `/users`                              | 用户访问路径前缀 |
