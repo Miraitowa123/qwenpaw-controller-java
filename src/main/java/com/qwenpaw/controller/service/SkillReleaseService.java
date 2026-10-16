@@ -23,6 +23,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.MalformedInputException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -122,10 +123,12 @@ public class SkillReleaseService {
             createSafeDirectories(templateRoot, templateSkillsRoot);
             extractionRoot = Files.createTempDirectory(templateSkillsRoot, ".skill-upload-");
             ExtractedSkill extracted = extractArchive(uploadedArchive, extractionRoot);
+            WorkspaceSkillManifest.SkillMetadata metadata = WorkspaceSkillManifest.readMetadata(
+                    extractionRoot.resolve(extracted.skillName()), extracted.skillName());
 
             Path finalExtractionRoot = extractionRoot;
-            return withIoLock(lockName("skill-template", extracted.skillName()), () ->
-                    installTemplatePackage(uploadedArchive, archiveCopy, finalExtractionRoot, extracted));
+            return withIoLock(lockName("skill-workspace", templateRoot.toString()), () ->
+                    installTemplatePackage(uploadedArchive, archiveCopy, finalExtractionRoot, extracted, metadata));
         } finally {
             Files.deleteIfExists(uploadedArchive);
             deleteRecursivelyQuietly(extractionRoot);
@@ -133,7 +136,7 @@ public class SkillReleaseService {
     }
 
     /**
-     * 使用有界线程池并发发布到多个用户；同一用户技能通过 Kubernetes Lease 串行化。
+     * 使用有界线程池并发发布到多个用户；同一用户的清单通过 Kubernetes Lease 串行化。
      */
     public SkillPublishResult publish(SkillPublishRequest request) throws IOException {
         String skillName = normalizeSkillName(request == null ? null : request.getSkillName());
@@ -179,13 +182,15 @@ public class SkillReleaseService {
     private SkillPackageInfo installTemplatePackage(Path uploadedArchive,
                                                     ArchiveCopy archiveCopy,
                                                     Path extractionRoot,
-                                                    ExtractedSkill extracted) throws IOException {
+                                                    ExtractedSkill extracted,
+                                                    WorkspaceSkillManifest.SkillMetadata metadata) throws IOException {
         String skillName = extracted.skillName();
         Path skillPackageRoot = packageRoot().resolve(skillName).normalize();
         ensureUnder(packageRoot(), skillPackageRoot, "skill package path escapes package root");
         createSafeDirectories(packageRoot(), skillPackageRoot);
         Path packagePath = skillPackageRoot.resolve(archiveCopy.digest() + ".zip");
-        if (Files.exists(packagePath, LinkOption.NOFOLLOW_LINKS)) {
+        boolean newPackage = !Files.exists(packagePath, LinkOption.NOFOLLOW_LINKS);
+        if (!newPackage) {
             if (Files.isSymbolicLink(packagePath)
                     || !Files.isRegularFile(packagePath, LinkOption.NOFOLLOW_LINKS)) {
                 throw new IOException("existing immutable package path is not a regular file");
@@ -194,18 +199,27 @@ public class SkillReleaseService {
             move(uploadedArchive, packagePath);
         }
 
-        Path stagedSkill = extractionRoot.resolve(skillName).normalize();
-        Path templateSkill = templateSkillsRoot().resolve(skillName).normalize();
-        ensureUnder(templateSkillsRoot(), templateSkill, "template skill path escapes skills root");
-        replaceDirectory(stagedSkill, templateSkill);
-        writeCurrentDigest(skillPackageRoot, archiveCopy.digest());
-
-        return packageInfo(skillName, archiveCopy.digest(), packagePath, extracted.entryCount(), true);
+        try {
+            SkillPackageInfo info = packageInfo(skillName, archiveCopy.digest(), packagePath,
+                    extracted.entryCount(), true);
+            installWorkspaceSkill(extractionRoot.resolve(skillName), templateSkillsRoot(), skillName,
+                    metadata, skillPackageRoot, archiveCopy.digest());
+            return info;
+        } catch (IOException | RuntimeException e) {
+            if (newPackage) {
+                try {
+                    Files.deleteIfExists(packagePath);
+                } catch (IOException cleanupError) {
+                    e.addSuppressed(cleanupError);
+                }
+            }
+            throw e;
+        }
     }
 
     private SkillPublishUserResult publishOneSafely(Path archive, String skillName, String userId) {
         try {
-            return withIoLock(lockName("skill-publish", userId + "\n" + skillName),
+            return withIoLock(lockName("skill-workspace", resolveUserRoot(userId).toString()),
                     () -> publishOne(archive, skillName, userId));
         } catch (Exception e) {
             log.warn("Failed to publish skill {} to user {}", skillName, userId, e);
@@ -228,16 +242,10 @@ public class SkillReleaseService {
             if (!skillName.equals(extracted.skillName())) {
                 throw new IOException("package skill name does not match requested skill");
             }
-
-            Path target = skillsRoot.resolve(skillName).normalize();
-            ensureUnder(skillsRoot, target, "target skill path escapes skills root");
-            boolean existed = Files.exists(target, LinkOption.NOFOLLOW_LINKS);
-            if (existed && (Files.isSymbolicLink(target)
-                    || !Files.isDirectory(target, LinkOption.NOFOLLOW_LINKS))) {
-                throw new IOException("existing skill path is not a regular directory");
-            }
-
-            replaceDirectory(extractionRoot.resolve(skillName), target);
+            WorkspaceSkillManifest.SkillMetadata metadata = WorkspaceSkillManifest.readMetadata(
+                    extractionRoot.resolve(skillName), skillName);
+            boolean existed = installWorkspaceSkill(extractionRoot.resolve(skillName), skillsRoot,
+                    skillName, metadata, null, null);
             return userResult(userId, existed ? "UPDATED" : "INSTALLED",
                     existed ? "Skill updated" : "Skill installed");
         } finally {
@@ -522,41 +530,95 @@ public class SkillReleaseService {
         }
     }
 
-    private void replaceDirectory(Path stagedDirectory, Path targetDirectory) throws IOException {
-        if (!Files.isDirectory(stagedDirectory, LinkOption.NOFOLLOW_LINKS)
-                || Files.isSymbolicLink(stagedDirectory)) {
+    private boolean installWorkspaceSkill(Path stagedDirectory,
+                                          Path skillsRoot,
+                                          String skillName,
+                                          WorkspaceSkillManifest.SkillMetadata metadata,
+                                          Path currentPackageRoot,
+                                          String digest) throws IOException {
+        Path targetDirectory = skillsRoot.resolve(skillName).normalize();
+        ensureUnder(skillsRoot, targetDirectory, "skill path escapes skills root");
+        if (!Files.isDirectory(stagedDirectory, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(stagedDirectory)) {
             throw new IOException("staged skill directory is missing or invalid");
         }
-        if (Files.exists(targetDirectory, LinkOption.NOFOLLOW_LINKS)
-                && (Files.isSymbolicLink(targetDirectory)
-                || !Files.isDirectory(targetDirectory, LinkOption.NOFOLLOW_LINKS))) {
-            throw new IOException("target skill path is not a regular directory");
-        }
-
+        Path manifest = skillsRoot.getParent().resolve("skill.json");
         Path backup = targetDirectory.resolveSibling(".skill-backup-" + UUID.randomUUID());
-        boolean hadTarget = Files.exists(targetDirectory, LinkOption.NOFOLLOW_LINKS);
-        if (hadTarget) {
-            move(targetDirectory, backup);
-        }
-        try {
-            move(stagedDirectory, targetDirectory);
-        } catch (IOException e) {
-            if (hadTarget && Files.exists(backup, LinkOption.NOFOLLOW_LINKS)
-                    && !Files.exists(targetDirectory, LinkOption.NOFOLLOW_LINKS)) {
+        Path current = currentPackageRoot == null ? null : currentPackageRoot.resolve(CURRENT_FILE);
+        try (WorkspaceSkillManifest.ManifestLock ignored = WorkspaceSkillManifest.lock(manifest)) {
+            boolean hadTarget = Files.exists(targetDirectory, LinkOption.NOFOLLOW_LINKS);
+            if (hadTarget && (Files.isSymbolicLink(targetDirectory)
+                    || !Files.isDirectory(targetDirectory, LinkOption.NOFOLLOW_LINKS))) {
+                throw new IOException("target skill path is not a regular directory");
+            }
+            byte[] oldCurrent = null;
+            if (current != null && Files.exists(current, LinkOption.NOFOLLOW_LINKS)) {
+                if (!Files.isRegularFile(current, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(current)) {
+                    throw new IOException("current package marker is not a regular file: " + current);
+                }
+                oldCurrent = Files.readAllBytes(current);
+            }
+            Path stagedManifest = WorkspaceSkillManifest.prepareUpdate(manifest, skillName, metadata);
+            boolean movedOld = false;
+            boolean markerTouched = false;
+            try {
+                if (hadTarget) {
+                    move(targetDirectory, backup);
+                    movedOld = true;
+                }
+                move(stagedDirectory, targetDirectory);
+                if (current != null) {
+                    markerTouched = true;
+                    writeCurrentDigest(currentPackageRoot, digest);
+                }
+                WorkspaceSkillManifest.commit(stagedManifest, manifest);
+            } catch (IOException | RuntimeException e) {
+                if (markerTouched) {
+                    try {
+                        restoreCurrentDigest(current, oldCurrent);
+                    } catch (IOException rollbackError) {
+                        e.addSuppressed(rollbackError);
+                    }
+                }
                 try {
-                    move(backup, targetDirectory);
-                } catch (IOException restoreError) {
-                    e.addSuppressed(restoreError);
+                    if ((movedOld || !hadTarget) && Files.exists(targetDirectory, LinkOption.NOFOLLOW_LINKS)) {
+                        deleteRecursively(targetDirectory);
+                    }
+                    if (movedOld) {
+                        move(backup, targetDirectory);
+                    }
+                } catch (IOException rollbackError) {
+                    e.addSuppressed(rollbackError);
+                }
+                throw e;
+            } finally {
+                try {
+                    Files.deleteIfExists(stagedManifest);
+                } catch (IOException cleanupError) {
+                    log.warn("Failed to clean staged skill manifest {}", stagedManifest, cleanupError);
                 }
             }
-            throw e;
-        }
-        if (hadTarget) {
-            try {
-                deleteRecursively(backup);
-            } catch (IOException e) {
-                log.warn("Skill was replaced but backup cleanup failed for {}", backup, e);
+            if (movedOld) {
+                deleteRecursivelyQuietly(backup);
             }
+            return hadTarget;
+        }
+    }
+
+    private void restoreCurrentDigest(Path current, byte[] oldContent) throws IOException {
+        if (oldContent == null) {
+            Files.deleteIfExists(current);
+            return;
+        }
+        Path temporary = Files.createTempFile(current.getParent(), ".current-restore-", ".tmp");
+        try {
+            Files.write(temporary, oldContent, StandardOpenOption.TRUNCATE_EXISTING);
+            try {
+                Files.move(temporary, current, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, current, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
         }
     }
 
@@ -645,7 +707,14 @@ public class SkillReleaseService {
                     throw new IOException("path component is not a regular directory: " + current);
                 }
             } else {
-                Files.createDirectory(current);
+                try {
+                    Files.createDirectory(current);
+                } catch (FileAlreadyExistsException e) {
+                    if (Files.isSymbolicLink(current)
+                            || !Files.isDirectory(current, LinkOption.NOFOLLOW_LINKS)) {
+                        throw e;
+                    }
+                }
             }
         }
     }

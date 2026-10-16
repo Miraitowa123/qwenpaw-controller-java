@@ -919,7 +919,7 @@
                     <input type="file" id="skillPackageFile" accept=".zip,application/zip">
                     <button class="btn btn-primary" onclick="uploadSkillPackage()">上传并更新公共模板</button>
                     <div class="skill-upload-help">
-                        ZIP 必须只有一个顶层技能目录，并在该目录中包含 SKILL.md。上传成功后会立即更新公共模板中的同名技能。
+                        ZIP 必须只有一个顶层技能目录；其中的 SKILL.md 需包含与目录同名的 name 和非空 description。上传和下发时会同步更新对应的 skill.json。
                     </div>
                 </div>
                 <div class="sync-meta" id="skillReleaseMeta"></div>

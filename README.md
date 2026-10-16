@@ -34,8 +34,8 @@ QwenPaw Controller 是一个基于 Java 17 + Spring Boot 的 Kubernetes 用户 P
 | GET | `/bocompawAdmin/api/v1/users/pods` | 列出用户 Pod；可通过 `page`、`page_size` 分页（每页最多 100 条），不传参数时兼容原有全量返回 |
 | GET | `/bocompawAdmin/api/v1/skills/{skill_name}/download` | 下载当前用户指定技能目录 zip |
 | GET | `/bocompawAdmin/api/v1/admin/skill-packages` | 获取技能发布包和可发布用户列表 |
-| POST | `/bocompawAdmin/api/v1/admin/skill-packages` | 上传技能 ZIP，并更新公共模板中的已解压技能 |
-| POST | `/bocompawAdmin/api/v1/admin/skill-publications` | 将指定技能包并发发布到选中的用户 |
+| POST | `/bocompawAdmin/api/v1/admin/skill-packages` | 上传技能 ZIP，并更新公共模板中的技能目录和 `skill.json` |
+| POST | `/bocompawAdmin/api/v1/admin/skill-publications` | 将指定技能包及其 `skill.json` 条目并发发布到选中的用户 |
 | POST | `/bocompawAdmin/api/v1/admin/sync` | 同步用户 Pod 状态 |
 | POST | `/bocompawAdmin/api/v1/admin/cleanup` | 清理孤立资源 |
 | GET | `/bocompawAdmin/api/v1/admin/template-sync` | 获取模板树和可同步用户列表 |

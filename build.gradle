@@ -24,6 +24,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.fabric8:kubernetes-client:6.13.5'
+    implementation 'net.java.dev.jna:jna:5.13.0'
+    implementation 'org.yaml:snakeyaml'
     implementation 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
     // --- Redis ---
