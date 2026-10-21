@@ -5,6 +5,7 @@
       <profile name="Gradle Imported" enabled="true">
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
+          <entry name="$PROJECT_DIR$/../../05DevTools/gradle-8.10/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.30/f195ee86e6c896ea47a1d39defbe20eb59cd149d/lombok-1.18.30.jar" />
           <entry name="$PROJECT_DIR$/../../05DevTools/gradle-8.10/caches/modules-2/files-2.1/org.springframework.boot/spring-boot-configuration-processor/3.2.12/c129b36cdb95ee2a048742889aca2d12017d96be/spring-boot-configuration-processor-3.2.12.jar" />
         </processorPath>
         <module name="qwenpaw-controller-java.main" />

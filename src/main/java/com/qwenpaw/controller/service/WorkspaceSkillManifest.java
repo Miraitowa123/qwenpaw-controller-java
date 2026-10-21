@@ -40,6 +40,9 @@ final class WorkspaceSkillManifest {
     private static final Logger log = LoggerFactory.getLogger(WorkspaceSkillManifest.class);
     private static final String SCHEMA = "workspace-skill-manifest.v1";
     private static final int MAX_FRONTMATTER_BYTES = 256 * 1024;
+    private static final int O_RDWR = 2;
+    private static final int LOCK_EX = 2;
+    private static final int LOCK_UN = 8;
     private static final Charset LEGACY_CHARSET = Charset.forName("GB18030");
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final LibC LIBC = Native.load("c", LibC.class);
@@ -249,11 +252,12 @@ final class WorkspaceSkillManifest {
         if (!Files.isRegularFile(lockPath, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(lockPath)) {
             throw new IOException("skill.json lock is not a regular file: " + lockPath);
         }
-        int descriptor = LIBC.open(lockPath.toString(), 0);
+        // NFS uses a write lock to emulate an exclusive flock, so the descriptor must be writable.
+        int descriptor = LIBC.open(lockPath.toString(), O_RDWR);
         if (descriptor < 0) {
             throw new IOException("cannot open skill.json lock, errno=" + Native.getLastError());
         }
-        if (LIBC.flock(descriptor, 2) != 0) {
+        if (LIBC.flock(descriptor, LOCK_EX) != 0) {
             int error = Native.getLastError();
             LIBC.close(descriptor);
             throw new IOException("cannot lock skill.json, errno=" + error);
@@ -355,7 +359,7 @@ final class WorkspaceSkillManifest {
 
         @Override
         public void close() {
-            int unlock = LIBC.flock(descriptor, 8);
+            int unlock = LIBC.flock(descriptor, LOCK_UN);
             int close = LIBC.close(descriptor);
             if (unlock != 0 || close != 0) {
                 log.warn("Cannot release skill.json lock cleanly, errno={}", Native.getLastError());

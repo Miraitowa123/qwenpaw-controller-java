@@ -4,8 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加模糊搜索">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    <list default="true" id="14419c64-36de-4014-b82f-992ee8f160cb" name="Changes" comment="1、添加投产脚本">
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/KubernetesService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/WorkspaceSkillManifest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/qwenpaw/controller/service/WorkspaceSkillManifest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -99,6 +100,9 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="ReactorSettings">
+    <option name="notificationShown" value="true" />
+  </component>
   <component name="RunManager">
     <configuration default="true" type="JetRunConfigurationType">
       <module name="qwenpaw-controller-py" />
@@ -151,6 +155,7 @@
       <workItem from="1787729205999" duration="18932000" />
       <workItem from="1789454805049" duration="21163000" />
       <workItem from="1791512563992" duration="1499000" />
+      <workItem from="1791515020431" duration="41643000" />
     </task>
     <task id="LOCAL-00001" summary="commit">
       <option name="closed" value="true" />
@@ -376,7 +381,23 @@
       <option name="project" value="LOCAL" />
       <updated>1791512703262</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="1、添加技能上传功能">
+      <option name="closed" value="true" />
+      <created>1791956776002</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1791956776002</updated>
+    </task>
+    <task id="LOCAL-00030" summary="1、添加投产脚本">
+      <option name="closed" value="true" />
+      <created>1792118871795</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1792118871795</updated>
+    </task>
+    <option name="localTasksCounter" value="31" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -394,7 +415,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="commit" />
     <MESSAGE value="1、working和working.secret等文件配置从nas到qwenpaw实例内部2、修改pod内的系统环境参数配置" />
     <MESSAGE value="1.新增PVC挂载模式（以适配mac电脑）：subpath表示按用户目录分别挂载，singl-mount表示挂载整个 NAS 根目录2.只有新增pod的时候才做初始化cp操作，重启pod不操作" />
     <MESSAGE value="1.新增终端小黑窗的相关资源" />
@@ -418,7 +438,9 @@
     <MESSAGE value="1、修改ui" />
     <MESSAGE value="1、添加检索" />
     <MESSAGE value="1、添加模糊搜索" />
-    <option name="LAST_COMMIT_MESSAGE" value="1、添加模糊搜索" />
+    <MESSAGE value="1、添加技能上传功能" />
+    <MESSAGE value="1、添加投产脚本" />
+    <option name="LAST_COMMIT_MESSAGE" value="1、添加投产脚本" />
   </component>
   <component name="XSLT-Support.FileAssociations.UIState">
     <expand />
